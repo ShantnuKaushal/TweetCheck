@@ -6,12 +6,13 @@ import time
 from kafka import KafkaConsumer
 from transformers import BertTokenizer, BertForSequenceClassification
 
-# Config
+# Config - Docker Aware
 KAFKA_TOPIC = "tweets"
-KAFKA_BROKER = "localhost:9092"
-REDIS_HOST = "localhost"
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = 6379
-MODEL_PATH = "./model"
+# We look for model in current dir (local) or /app/model (docker)
+MODEL_PATH = "/app/model" if os.path.exists("/app/model") else "./model"
 
 # Redis Keys
 KEY_STATS = "tweetcheck:stats"
@@ -19,12 +20,19 @@ KEY_LATEST = "tweetcheck:latest"
 KEY_LAG = "tweetcheck:lag"
 
 def main():
-    print("AI Worker Starting...")
+    print(f"AI Worker Starting... (Kafka: {KAFKA_BROKER}, Redis: {REDIS_HOST})")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using Device: {device}")
+    # Force CPU for Docker compatibility unless GPU is explicitly passed through
+    # (Keeping it simple for the 'One Command' setup)
+    if os.getenv("KAFKA_BROKER") != "localhost:9092":
+        device = torch.device("cpu")
+        print("Running in Docker Mode -> Using CPU")
+    else:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Running in Local Mode -> Using {device}")
 
     try:
+        print(f"Loading model from {MODEL_PATH}...")
         tokenizer = BertTokenizer.from_pretrained(MODEL_PATH)
         model = BertForSequenceClassification.from_pretrained(MODEL_PATH)
         model.to(device)
@@ -34,24 +42,40 @@ def main():
         print(f"❌ Failed to load model: {e}")
         return
 
-    try:
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
-        r.ping()
-        print("✅ Connected to Redis.")
-    except Exception as e:
-        print(f"❌ Redis Failed: {e}")
+    # Retry Redis Connection
+    for i in range(10):
+        try:
+            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+            r.ping()
+            print("✅ Connected to Redis.")
+            break
+        except Exception as e:
+            print("Waiting for Redis...")
+            time.sleep(2)
+
+    # Retry Kafka Connection
+    consumer = None
+    for i in range(20):
+        try:
+            consumer = KafkaConsumer(
+                KAFKA_TOPIC,
+                bootstrap_servers=KAFKA_BROKER,
+                auto_offset_reset='latest',
+                enable_auto_commit=True,
+                value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+            )
+            print("✅ Connected to Kafka.")
+            break
+        except Exception:
+            print("Waiting for Kafka...")
+            time.sleep(3)
+
+    if not consumer:
+        print("❌ Could not connect to Kafka.")
         return
 
-    consumer = KafkaConsumer(
-        KAFKA_TOPIC,
-        bootstrap_servers=KAFKA_BROKER,
-        auto_offset_reset='latest',
-        enable_auto_commit=True,
-        value_deserializer=lambda x: json.loads(x.decode('utf-8'))
-    )
-    print("✅ Connected to Kafka.")
-
     count = 0
+    print("🚀 Worker Loop Started")
     for message in consumer:
         tweet = message.value
         text = tweet['text']

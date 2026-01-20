@@ -18,7 +18,6 @@ const (
 	DataPath   = "../../data/simulation_dataset.csv"
 	Port       = ":8080"
 	KafkaTopic = "tweets"
-	KafkaURL   = "localhost:9092"
 )
 
 var (
@@ -48,30 +47,46 @@ func main() {
 	http.HandleFunc("/control", handleControl)
 	http.HandleFunc("/status", handleStatus)
 
-	fmt.Printf("Server listening on localhost%s\n", Port)
+	fmt.Printf("Server listening on port %s\n", Port)
 	log.Fatal(http.ListenAndServe(Port, nil))
 }
 
 func setupKafkaProducer() sarama.SyncProducer {
+	// Docker Support: Check for Env Var, otherwise use localhost
+	kafkaURL := os.Getenv("KAFKA_URL")
+	if kafkaURL == "" {
+		kafkaURL = "localhost:9092"
+	}
+
+	fmt.Printf("Connecting to Kafka at: %s\n", kafkaURL)
+
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 	
-	for i := 0; i < 10; i++ {
-		producer, err := sarama.NewSyncProducer([]string{KafkaURL}, config)
+	// Retry loop (Docker takes time to start Kafka)
+	for i := 0; i < 20; i++ {
+		producer, err := sarama.NewSyncProducer([]string{kafkaURL}, config)
 		if err == nil {
 			fmt.Println("Connected to Kafka!")
 			return producer
 		}
-		time.Sleep(2 * time.Second)
+		fmt.Println("Waiting for Kafka...")
+		time.Sleep(3 * time.Second)
 	}
 	log.Fatal("Could not connect to Kafka")
 	return nil
 }
 
 func firehose(producer sarama.SyncProducer) {
-	f, err := os.Open(DataPath)
+	// Docker Support: Check if running in container (different path)
+	path := DataPath
+	if _, err := os.Stat("/app/data/simulation_dataset.csv"); err == nil {
+		path = "/app/data/simulation_dataset.csv"
+	}
+
+	f, err := os.Open(path)
 	if err != nil {
-		log.Printf("Error opening data: %v", err)
+		log.Printf("Error opening data at %s: %v", path, err)
 		return
 	}
 	defer f.Close()
@@ -127,12 +142,10 @@ func firehose(producer sarama.SyncProducer) {
 }
 
 func handleControl(w http.ResponseWriter, r *http.Request) {
-	// CORS Headers - Allow Frontend to talk to Go
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	// Handle Preflight request
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -159,7 +172,6 @@ func handleControl(w http.ResponseWriter, r *http.Request) {
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	
 	controlMx.Lock()
 	defer controlMx.Unlock()
 	json.NewEncoder(w).Encode(control)

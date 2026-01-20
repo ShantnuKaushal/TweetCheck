@@ -1,5 +1,6 @@
 import json
 import asyncio
+import os
 import redis.asyncio as redis
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +14,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-REDIS_URL = "redis://localhost:6379"
+# Docker Aware Config
+redis_host = os.getenv("REDIS_HOST", "localhost")
+REDIS_URL = f"redis://{redis_host}:6379"
+
+print(f"Dashboard API connecting to Redis at: {REDIS_URL}")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

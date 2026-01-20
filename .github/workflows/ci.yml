@@ -1,4 +1,4 @@
-name: Sentinel CI
+name: TweetCheck CI
 
 on:
   push:
@@ -7,24 +7,32 @@ on:
     branches: [ "main" ]
 
 jobs:
-  python-build:
+  build-test:
     runs-on: ubuntu-latest
+    
     steps:
     - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-        
-    - name: Install Dependencies
+
+    # 1. Build Go Ingestion
+    - name: Build Go Service
       run: |
-        python -m pip install --upgrade pip
-        # Install standard libs from default PyPI
-        pip install pandas numpy transformers scikit-learn
-        # Install PyTorch CPU version separately
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
-        
-    - name: Syntax Check
+        cd services/go-ingestion
+        docker build -t tweetcheck-go .
+
+    # 2. Build Dashboard API
+    - name: Build Dashboard API
       run: |
-        python -m compileall training/
+        cd services/dashboard-api
+        docker build -t tweetcheck-api .
+
+    # 3. Build AI Worker
+    - name: Build AI Worker
+      run: |
+        cd services/ai-worker
+        docker build -t tweetcheck-ai .
+        
+    # 4. Build Frontend
+    - name: Build Frontend
+      run: |
+        cd frontend
+        docker build -t tweetcheck-frontend .
