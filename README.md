@@ -51,9 +51,6 @@ python training/train.py
 Run the entire distributed engine with a single command from the root directory:
 docker-compose up --build
 
-* Dashboard: http://localhost:3000
-
-
 ## System Features
 
 ### Real-Time Sentiment Pulse
