@@ -1,65 +1,180 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState, useRef } from "react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { Activity, Server, Database, Zap } from "lucide-react";
+import ControlPanel from "./components/ControlPanel";
+
+// Types
+type Tweet = {
+  text: string;
+  sentiment: number;
+  lag: number;
+};
+
+type Stats = {
+  total: number;
+  positive: number;
+  negative: number;
+};
+
+type GraphPoint = {
+  time: string;
+  posRate: number;
+  negRate: number;
+  lag: number;
+};
+
+export default function Dashboard() {
+  const [stats, setStats] = useState<Stats>({ total: 0, positive: 0, negative: 0 });
+  const [feed, setFeed] = useState<Tweet[]>([]);
+  const [lag, setLag] = useState(0);
+  const [graphData, setGraphData] = useState<GraphPoint[]>([]);
+  
+  // Refs for calculating rate (delta)
+  const prevStats = useRef<Stats>({ total: 0, positive: 0, negative: 0 });
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8000/ws");
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      // 1. Update Basic State
+      const currentStats = {
+        total: parseInt(data.stats.total),
+        positive: parseInt(data.stats.positive),
+        negative: parseInt(data.stats.negative),
+      };
+      setStats(currentStats);
+      setFeed(data.feed);
+      setLag(data.lag);
+
+      // 2. Calculate Rate (Tweets Per Second approx) for Graph
+      // Since we receive updates every 0.1s, delta * 10 = rate/sec
+      const posDelta = currentStats.positive - prevStats.current.positive;
+      const negDelta = currentStats.negative - prevStats.current.negative;
+      
+      prevStats.current = currentStats;
+
+      setGraphData((prev) => {
+        const now = new Date();
+        const timeStr = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+        
+        const newPoint = {
+          time: timeStr,
+          posRate: posDelta * 10, // approximate rate
+          negRate: negDelta * 10,
+          lag: data.lag
+        };
+
+        // Keep only last 20 data points
+        const newData = [...prev, newPoint];
+        if (newData.length > 20) newData.shift();
+        return newData;
+      });
+    };
+
+    return () => ws.close();
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-black text-gray-100 p-6 font-mono selection:bg-green-900">
+      {/* Header */}
+      <header className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+        <div className="flex items-center gap-3">
+          <Activity className="text-green-500" />
+          <h1 className="text-2xl font-bold tracking-tighter">
+            TWEETCHECK <span className="text-gray-600">v1.0</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="flex gap-6 text-sm">
+          <div className="flex items-center gap-2">
+            <Database size={16} className="text-blue-500" />
+            <span className="text-gray-400">PROCESSED:</span>
+            <span className="font-bold">{stats.total.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Server size={16} className={lag > 1 ? "text-red-500" : "text-green-500"} />
+            <span className="text-gray-400">SYS LAG:</span>
+            <span className={`font-bold ${lag > 1 ? "text-red-500" : "text-green-500"}`}>
+              {lag.toFixed(2)}s
+            </span>
+          </div>
         </div>
-      </main>
-    </div>
+      </header>
+
+      {/* Grid Layout */}
+      <div className="grid grid-cols-12 gap-6">
+        
+        {/* LEFT COL: Control & Graph (8 cols) */}
+        <div className="col-span-8 space-y-6">
+          
+          {/* Top Cards */}
+          <div className="grid grid-cols-2 gap-4">
+            <ControlPanel />
+            <div className="p-4 bg-gray-900 border border-gray-800 rounded-lg flex flex-col justify-center">
+               <div className="text-gray-400 text-xs uppercase mb-2">Sentiment Ratio</div>
+               <div className="flex items-end gap-2">
+                  <div className="text-4xl font-bold text-green-400">
+                    {stats.total > 0 ? ((stats.positive / stats.total) * 100).toFixed(2) : 0}%
+                  </div>
+                  <div className="text-sm text-gray-500 mb-1">Positive</div>
+               </div>
+               <div className="w-full bg-gray-800 h-2 mt-2 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-green-500 h-full transition-all duration-500" 
+                    style={{ width: `${stats.total > 0 ? (stats.positive / stats.total) * 100 : 0}%` }}
+                  ></div>
+               </div>
+            </div>
+          </div>
+
+          {/* Graph */}
+          <div className="bg-gray-900 border border-gray-800 rounded-lg p-4 h-96">
+            <h3 className="text-gray-400 text-xs uppercase font-bold mb-4 flex items-center gap-2">
+              <Zap size={14} className="text-yellow-500" /> Live Throughput (Tweets/Sec)
+            </h3>
+            <ResponsiveContainer width="100%" height="90%">
+              <LineChart data={graphData}>
+                <XAxis dataKey="time" stroke="#4b5563" fontSize={10} tick={false} />
+                <YAxis stroke="#4b5563" fontSize={10} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#111', borderColor: '#333' }}
+                  itemStyle={{ fontSize: '12px' }}
+                />
+                <Line type="monotone" dataKey="posRate" stroke="#22c55e" strokeWidth={2} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="negRate" stroke="#ef4444" strokeWidth={2} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* RIGHT COL: The Firehose (4 cols) */}
+        <div className="col-span-4 bg-gray-900 border border-gray-800 rounded-lg p-4 flex flex-col h-[600px]">
+          <h3 className="text-gray-400 text-xs uppercase font-bold mb-4 border-b border-gray-800 pb-2">
+            Live Feed
+          </h3>
+          <div className="flex-1 overflow-hidden relative">
+            <div className="absolute inset-0 overflow-y-auto space-y-2 pr-2">
+              {feed.map((tweet, i) => (
+                <div key={i} className="p-3 bg-black/50 border-l-2 border-gray-700 text-xs font-mono">
+                  <div className="flex justify-between mb-1">
+                    <span className={tweet.sentiment === 1 ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
+                      {tweet.sentiment === 1 ? "POSITIVE" : "NEGATIVE"}
+                    </span>
+                    <span className="text-gray-600">Lag: {tweet.lag}s</span>
+                  </div>
+                  <p className="text-gray-300 opacity-80 leading-tight">
+                    {tweet.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
   );
 }

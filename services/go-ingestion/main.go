@@ -127,6 +127,17 @@ func firehose(producer sarama.SyncProducer) {
 }
 
 func handleControl(w http.ResponseWriter, r *http.Request) {
+	// CORS Headers - Allow Frontend to talk to Go
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Handle Preflight request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -147,6 +158,8 @@ func handleControl(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	
 	controlMx.Lock()
 	defer controlMx.Unlock()
 	json.NewEncoder(w).Encode(control)
