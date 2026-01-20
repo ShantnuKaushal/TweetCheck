@@ -29,6 +29,7 @@ var (
 type Tweet struct {
 	Sentiment int    `json:"sentiment"`
 	Text      string `json:"text"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type Control struct {
@@ -39,7 +40,6 @@ type Control struct {
 func main() {
 	fmt.Println("TweetCheck Firehose Service Starting...")
 
-	// Connect to Kafka
 	producer := setupKafkaProducer()
 	defer producer.Close()
 
@@ -56,17 +56,15 @@ func setupKafkaProducer() sarama.SyncProducer {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 	
-	// Retry loop for connection
 	for i := 0; i < 10; i++ {
 		producer, err := sarama.NewSyncProducer([]string{KafkaURL}, config)
 		if err == nil {
 			fmt.Println("Connected to Kafka!")
 			return producer
 		}
-		fmt.Printf("Failed to connect to Kafka (attempt %d/10). Retrying in 2s...\n", i+1)
 		time.Sleep(2 * time.Second)
 	}
-	log.Fatal("Could not connect to Kafka after 10 attempts")
+	log.Fatal("Could not connect to Kafka")
 	return nil
 }
 
@@ -107,6 +105,7 @@ func firehose(producer sarama.SyncProducer) {
 		tweet := Tweet{
 			Sentiment: sent,
 			Text:      record[1],
+			Timestamp: time.Now().UnixMilli(),
 		}
 
 		tweetJSON, _ := json.Marshal(tweet)
@@ -116,14 +115,11 @@ func firehose(producer sarama.SyncProducer) {
 			Value: sarama.StringEncoder(tweetJSON),
 		}
 
-		_, _, err = producer.SendMessage(msg)
-		if err != nil {
-			log.Printf("Failed to send message: %v", err)
-		}
+		producer.SendMessage(msg)
 
 		count++
 		if count%100 == 0 {
-			fmt.Printf("[Rate: %d/s] Pushed %d tweets to Kafka\n", rate, count)
+			fmt.Printf("[Rate: %d/s] Pushed %d tweets\n", rate, count)
 		}
 		
 		time.Sleep(sleepDuration)
