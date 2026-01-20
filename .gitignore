@@ -16,3 +16,5 @@ training/*.csv
 # Ignore OS files
 .DS_Store
 Thumbs.db
+
+*.safetensors
