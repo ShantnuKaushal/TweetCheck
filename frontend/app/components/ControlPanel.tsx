@@ -1,83 +1,209 @@
 "use client";
-import { useState, useEffect } from "react";
 
-export default function ControlPanel() {
-  const [rate, setRate] = useState(10);
-  const [running, setRunning] = useState(false); // Default to False (Off)
+import { useCallback, useEffect, useState } from "react";
 
-  // 1. On Load: Ask Go Backend for current status
+const CONTROL_STATUS_URL = "http://localhost:8080/status";
+const CONTROL_UPDATE_URL = "http://localhost:8080/control";
+
+export type ControlSnapshot = {
+  rate: number;
+  running: boolean;
+  serviceReachable: boolean;
+  pending: boolean;
+  initialized: boolean;
+  error: string | null;
+};
+
+type ControlPanelProps = {
+  onStatusChange?: (snapshot: ControlSnapshot) => void;
+};
+
+const initialSnapshot: ControlSnapshot = {
+  rate: 10,
+  running: false,
+  serviceReachable: false,
+  pending: false,
+  initialized: false,
+  error: null,
+};
+
+export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
+  const [snapshot, setSnapshot] = useState<ControlSnapshot>(initialSnapshot);
+  const [draftRate, setDraftRate] = useState(initialSnapshot.rate);
+
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch("http://localhost:8080/status");
-        const data = await res.json();
-        setRunning(data.running);
-        setRate(data.rate);
-      } catch (e) {
-        console.error("Backend offline?", e);
+    onStatusChange?.(snapshot);
+  }, [onStatusChange, snapshot]);
+
+  useEffect(() => {
+    setDraftRate(snapshot.rate);
+  }, [snapshot.rate]);
+
+  const syncStatus = useCallback(async () => {
+    try {
+      const response = await fetch(CONTROL_STATUS_URL);
+
+      if (!response.ok) {
+        throw new Error("Control service unavailable");
       }
-    };
-    fetchStatus();
+
+      const data = (await response.json()) as { rate: number; running: boolean };
+
+      setSnapshot((current) => ({
+        ...current,
+        rate: Number(data.rate ?? current.rate),
+        running: Boolean(data.running),
+        serviceReachable: true,
+        pending: false,
+        initialized: true,
+        error: null,
+      }));
+    } catch {
+      setSnapshot((current) => ({
+        ...current,
+        serviceReachable: false,
+        pending: false,
+        initialized: true,
+        error: "Control service unreachable",
+      }));
+    }
   }, []);
 
-  const updateBackend = async (newRate: number, isRunning: boolean) => {
-    try {
-      await fetch("http://localhost:8080/control", {
-        method: "POST",
-        body: JSON.stringify({ rate: newRate, running: isRunning }),
-      });
-    } catch (e) {
-      console.error("Failed to talk to Go Backend", e);
-    }
-  };
+  useEffect(() => {
+    let active = true;
 
-  const handleSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value);
-    setRate(val);
-    updateBackend(val, running);
+    const load = async () => {
+      if (!active) {
+        return;
+      }
+
+      await syncStatus();
+    };
+
+    void load();
+    const interval = window.setInterval(() => {
+      void load();
+    }, 8000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [syncStatus]);
+
+  const updateBackend = useCallback(async (nextRate: number, nextRunning: boolean) => {
+    const previous = snapshot;
+
+    setSnapshot((current) => ({
+      ...current,
+      rate: nextRate,
+      running: nextRunning,
+      pending: true,
+      error: null,
+    }));
+
+    try {
+      const response = await fetch(CONTROL_UPDATE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ rate: nextRate, running: nextRunning }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update control service");
+      }
+
+      setSnapshot((current) => ({
+        ...current,
+        serviceReachable: true,
+        pending: false,
+        initialized: true,
+        error: null,
+      }));
+    } catch {
+      setSnapshot({
+        ...previous,
+        serviceReachable: false,
+        pending: false,
+        initialized: true,
+        error: "Control update failed",
+      });
+    }
+  }, [snapshot]);
+
+  const commitRate = useCallback(() => {
+    if (draftRate !== snapshot.rate) {
+      void updateBackend(draftRate, snapshot.running);
+    }
+  }, [draftRate, snapshot.rate, snapshot.running, updateBackend]);
+
+  const handleSlider = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setDraftRate(Number(event.target.value));
   };
 
   const togglePower = () => {
-    const newState = !running;
-    setRunning(newState);
-    updateBackend(rate, newState);
+    void updateBackend(snapshot.rate, !snapshot.running);
   };
 
+  const helperText = snapshot.running
+    ? `${snapshot.rate}/sec streaming`
+    : snapshot.serviceReachable
+      ? "Start the stream to begin processing."
+      : "Control API unavailable.";
+
   return (
-    <div className="p-4 bg-gray-900 border border-gray-800 rounded-lg shadow-lg">
-      <h3 className="text-gray-400 text-xs uppercase tracking-widest font-bold mb-4">
-        Ingestion Control
-      </h3>
+    <div className="border-t border-[var(--border-soft)] pt-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+        <div className="space-y-4">
+          <div>
+            <div className="text-sm font-medium tracking-[0.02em] text-[var(--muted-strong)]">Control</div>
+            <p className="mt-2 text-sm text-[var(--muted)]">{helperText}</p>
+          </div>
 
-      <div className="flex items-center space-x-4 mb-4">
+          <div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm font-medium text-white">Speed</span>
+              <span className="numeric text-sm text-[var(--muted-strong)]">{draftRate}/sec</span>
+            </div>
+            <div className="mt-3">
+              <input
+                type="range"
+                min="1"
+                max="500"
+                value={draftRate}
+                onChange={handleSlider}
+                onMouseUp={commitRate}
+                onTouchEnd={commitRate}
+                onKeyUp={commitRate}
+                disabled={snapshot.pending}
+                className="control-slider focus-ring cursor-pointer"
+                aria-label="Set ingestion speed"
+              />
+              <div className="mt-3 grid grid-cols-3 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                <span>1</span>
+                <span className="text-center">250</span>
+                <span className="text-right">500</span>
+              </div>
+            </div>
+          </div>
+
+          {snapshot.error ? <div className="text-sm text-[var(--danger)]">{snapshot.error}</div> : null}
+        </div>
+
         <button
+          type="button"
           onClick={togglePower}
-          className={`px-4 py-2 rounded font-bold text-xs uppercase transition-colors ${
-            running ? "bg-red-900 text-red-100 hover:bg-red-800" : "bg-green-900 text-green-100 hover:bg-green-800"
-          }`}
+          disabled={snapshot.pending}
+          className={`focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-full px-5 py-3 text-center text-sm font-semibold leading-none whitespace-nowrap transition ${
+            snapshot.running
+              ? "bg-[rgba(243,140,118,0.14)] text-[var(--danger)] hover:-translate-y-0.5"
+              : "bg-[rgba(var(--accent-rgb),0.18)] text-[var(--accent-strong)] hover:-translate-y-0.5"
+          } disabled:cursor-not-allowed disabled:opacity-60`}
         >
-          {running ? "STOP SYSTEM" : "START SYSTEM"}
+          {snapshot.running ? "Stop" : "Start"}
         </button>
-        <div className="text-gray-300 text-sm font-mono">
-          STATUS: <span className={running ? "text-green-500" : "text-red-500"}>
-            {running ? "ONLINE" : "OFFLINE"}
-          </span>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex justify-between text-xs font-mono text-gray-400">
-          <span>SPEED</span>
-          <span className="text-blue-400">{rate} Tweets/s</span>
-        </div>
-        <input
-          type="range"
-          min="1"
-          max="500"
-          value={rate}
-          onChange={handleSlider}
-          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-        />
       </div>
     </div>
   );
