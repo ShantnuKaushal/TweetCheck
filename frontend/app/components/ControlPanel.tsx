@@ -204,15 +204,15 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
             aria-label="Set ingestion speed"
           />
           <div className="grid grid-cols-3 gap-2 text-xs text-[var(--muted)]">
-            <div className={`flex items-center gap-2 ${draftStep === 0 ? "text-[var(--accent-strong)]" : ""}`}>
+            <div className={`flex items-center gap-2 ${draftStep === 0 ? "text-[var(--positive-strong)]" : ""}`}>
               <Turtle className="h-4 w-4" />
               <span>Slow</span>
             </div>
-            <div className={`flex items-center justify-center gap-2 ${draftStep === 1 ? "text-[var(--accent-strong)]" : ""}`}>
+            <div className={`flex items-center justify-center gap-2 ${draftStep === 1 ? "text-[var(--positive-strong)]" : ""}`}>
               <Rabbit className="h-4 w-4" />
               <span>Medium</span>
             </div>
-            <div className={`flex items-center justify-end gap-2 ${draftStep === 2 ? "text-[var(--accent-strong)]" : ""}`}>
+            <div className={`flex items-center justify-end gap-2 ${draftStep === 2 ? "text-[var(--positive-strong)]" : ""}`}>
               <Zap className="h-4 w-4" />
               <span>Fast</span>
             </div>
@@ -225,14 +225,14 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
           disabled={snapshot.pending}
           className={`focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-full px-5 py-3 text-center text-sm font-semibold leading-none whitespace-nowrap transition ${
             snapshot.running
-              ? "bg-[rgba(243,140,118,0.14)] text-[var(--danger)] hover:-translate-y-0.5"
-              : "bg-[rgba(var(--accent-rgb),0.18)] text-[var(--accent-strong)] hover:-translate-y-0.5"
+              ? "bg-[rgba(var(--negative-rgb),0.14)] text-[var(--negative-strong)] hover:-translate-y-0.5"
+              : "bg-[rgba(var(--positive-rgb),0.18)] text-[var(--positive-strong)] hover:-translate-y-0.5"
           } disabled:cursor-not-allowed disabled:opacity-60`}
         >
           {snapshot.running ? "Stop" : "Start"}
         </button>
 
-        {snapshot.error ? <div className="text-sm text-[var(--danger)]">{snapshot.error}</div> : null}
+        {snapshot.error ? <div className="text-sm text-[var(--negative-strong)]">{snapshot.error}</div> : null}
       </div>
     </section>
   );

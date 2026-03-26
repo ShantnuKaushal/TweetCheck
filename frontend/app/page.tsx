@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import ControlPanel, { type ControlSnapshot } from "./components/ControlPanel";
 import SentimentTester from "./components/SentimentTester";
 
@@ -64,13 +64,47 @@ function Metric({
 }: {
   label: string;
   value: string;
-  detail: string;
+  detail?: ReactNode;
 }) {
   return (
-    <div className="rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-4 text-center">
+    <div className="metric-card rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-4 text-center">
       <div className="label-kicker">{label}</div>
-      <div className="numeric mt-2 text-3xl font-semibold tracking-[-0.04em] text-white">{value}</div>
-      <div className="mt-1 text-sm text-[var(--muted)]">{detail}</div>
+      <div className="numeric mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">{value}</div>
+      {detail ? <div className="mt-3">{detail}</div> : null}
+    </div>
+  );
+}
+
+function SentimentSplitMetric({
+  positiveShare,
+  negativeShare,
+}: {
+  positiveShare: number;
+  negativeShare: number;
+}) {
+  return (
+    <div className="metric-card rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-4">
+      <div className="label-kicker text-center">Sentiment split</div>
+
+      <div className="mt-4 flex items-center justify-center gap-3 sm:gap-4">
+        <div className="metric-side">
+          <div className="metric-side-label">
+            <span className="metric-dot metric-dot-positive" aria-hidden="true" />
+            Positive
+          </div>
+          <div className="numeric mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">{positiveShare.toFixed(1)}%</div>
+        </div>
+
+        <div className="h-12 w-px bg-[var(--border-soft)]" aria-hidden="true" />
+
+        <div className="metric-side">
+          <div className="metric-side-label">
+            <span className="metric-dot metric-dot-negative" aria-hidden="true" />
+            Negative
+          </div>
+          <div className="numeric mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">{negativeShare.toFixed(1)}%</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -84,11 +118,11 @@ function RecentTweet({ tweet }: { tweet: Tweet }) {
         <span
           className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
             positive
-              ? "bg-[rgba(var(--accent-rgb),0.14)] text-[var(--accent-strong)]"
-              : "bg-[rgba(243,140,118,0.14)] text-[var(--danger)]"
+              ? "bg-[rgba(var(--positive-rgb),0.14)] text-[var(--positive-strong)]"
+              : "bg-[rgba(var(--negative-rgb),0.14)] text-[var(--negative-strong)]"
           }`}
         >
-          <span className={`h-2 w-2 rounded-full ${positive ? "bg-[var(--accent-strong)]" : "bg-[var(--danger)]"}`} />
+          <span className={`h-2 w-2 rounded-full ${positive ? "bg-[var(--positive-strong)]" : "bg-[var(--negative-strong)]"}`} />
           {positive ? "Positive" : "Negative"}
         </span>
       </div>
@@ -201,21 +235,9 @@ export default function Dashboard() {
 
         <section className="surface-panel w-full max-w-[1180px] rounded-[28px] p-4 sm:p-5">
           <div className="grid gap-4 md:grid-cols-3">
-            <Metric
-              label="Processed"
-              value={compactNumber.format(totalCount)}
-              detail={`${totalCount.toLocaleString()} classifications`}
-            />
-            <Metric
-              label="Sentiment split"
-              value={`${positiveShare.toFixed(1)}%`}
-              detail={`Negative ${negativeShare.toFixed(1)}%`}
-            />
-            <Metric
-              label="Target"
-              value={controlSnapshot.running ? formatSpeedLabel(controlSnapshot.rate) : "Paused"}
-              detail={controlSnapshot.serviceReachable ? "Control reachable" : "Control unavailable"}
-            />
+            <Metric label="Processed" value={compactNumber.format(totalCount)} />
+            <SentimentSplitMetric positiveShare={positiveShare} negativeShare={negativeShare} />
+            <Metric label="Target" value={controlSnapshot.running ? formatSpeedLabel(controlSnapshot.rate) : "Paused"} />
           </div>
         </section>
 
@@ -235,7 +257,7 @@ export default function Dashboard() {
               </div>
 
               <div className="flex flex-wrap gap-3 text-sm">
-                <span className="rounded-full border border-[rgba(var(--accent-rgb),0.22)] px-4 py-2 text-[var(--accent-strong)]">
+                <span className="rounded-full border border-[rgba(var(--positive-rgb),0.22)] px-4 py-2 text-[var(--positive-strong)]">
                   <span className="numeric font-semibold">{positiveShare.toFixed(1)}%</span> positive
                 </span>
               </div>
@@ -251,13 +273,13 @@ export default function Dashboard() {
                     <span
                       className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${
                         currentTweet.sentiment === 1
-                          ? "bg-[rgba(var(--accent-rgb),0.16)] text-[var(--accent-strong)]"
-                          : "bg-[rgba(243,140,118,0.16)] text-[var(--danger)]"
+                          ? "bg-[rgba(var(--positive-rgb),0.16)] text-[var(--positive-strong)]"
+                          : "bg-[rgba(var(--negative-rgb),0.16)] text-[var(--negative-strong)]"
                       }`}
                     >
                       <span
                         className={`h-2.5 w-2.5 rounded-full ${
-                          currentTweet.sentiment === 1 ? "bg-[var(--accent-strong)]" : "bg-[var(--danger)]"
+                          currentTweet.sentiment === 1 ? "bg-[var(--positive-strong)]" : "bg-[var(--negative-strong)]"
                         }`}
                       />
                       {currentTweet.sentiment === 1 ? "Positive" : "Negative"}

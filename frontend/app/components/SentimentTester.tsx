@@ -58,7 +58,7 @@ export default function SentimentTester() {
     <section className="surface-panel rounded-[30px] p-5 sm:p-6">
       <div className="text-center">
         <div className="text-[1.35rem] font-semibold tracking-[-0.04em] text-white">Sentiment Check</div>
-        <p className="mt-2 text-sm text-[var(--muted)]">Type a sentence and check the model response.</p>
+        <p className="mx-auto mt-2 max-w-[16rem] text-balance text-sm text-[var(--muted)]">Type a sentence to test the model.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
@@ -78,7 +78,7 @@ export default function SentimentTester() {
           <button
             type="submit"
             disabled={loading}
-            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full bg-[rgba(var(--accent-rgb),0.18)] px-5 py-3 text-sm font-semibold text-[var(--accent-strong)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="focus-ring inline-flex min-h-11 items-center justify-center rounded-full bg-[rgba(var(--positive-rgb),0.18)] px-5 py-3 text-sm font-semibold text-[var(--positive-strong)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Checking..." : "Check sentiment"}
           </button>
@@ -88,8 +88,8 @@ export default function SentimentTester() {
               <div
                 className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${
                   result.sentiment === "positive"
-                    ? "bg-[rgba(var(--accent-rgb),0.14)] text-[var(--accent-strong)]"
-                    : "bg-[rgba(243,140,118,0.14)] text-[var(--danger)]"
+                    ? "bg-[rgba(var(--positive-rgb),0.14)] text-[var(--positive-strong)]"
+                    : "bg-[rgba(var(--negative-rgb),0.14)] text-[var(--negative-strong)]"
                 }`}
               >
                 {result.sentiment === "positive" ? "Positive" : "Negative"}
@@ -101,7 +101,7 @@ export default function SentimentTester() {
       </form>
 
       {error ? (
-        <div className="mt-4 rounded-[18px] border border-[rgba(243,140,118,0.22)] bg-[rgba(243,140,118,0.08)] px-4 py-3 text-sm text-[var(--danger)]">
+        <div className="mt-4 rounded-[18px] border border-[rgba(var(--negative-rgb),0.22)] bg-[rgba(var(--negative-rgb),0.08)] px-4 py-3 text-sm text-[var(--negative-strong)]">
           {error}
         </div>
       ) : null}
