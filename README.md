@@ -96,3 +96,9 @@ The system tracks processing lag by comparing ingestion time with inference time
 ## CI/CD
 
 This project uses GitHub Actions to validate the system by building the Docker images for the Go service, AI worker, dashboard API, and frontend.
+
+## Dashboard Preview
+
+Below is a preview of the TweetCheck dashboard. It shows the live sentiment stream, ingestion controls, system status, and the built-in sentiment testing panel.
+<img width="2559" height="1439" alt="image" src="https://github.com/user-attachments/assets/a37cd503-ac05-45cd-bd1e-1b76ab4ef9dd" />
+
