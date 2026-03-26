@@ -1,64 +1,98 @@
 # TweetCheck: Distributed Sentiment Analysis Engine
 
-TweetCheck is a high-throughput, fault-tolerant distributed system designed to ingest, process, and visualize social media sentiment in real-time. It mimics the architecture of large-scale data pipelines used by companies like Twitter/X or Bloomberg, utilizing a "Firehose" architecture to stress-test deep learning inference capabilities.
-
-## Architecture
-
-The system follows a microservices event-driven architecture designed to handle high-velocity data streams:
-
-1. Ingestion Service (Golang): A high-performance producer that reads from a 1.6M tweet dataset and "fires" them into the network. It uses a concurrency-safe control loop to adjust ingestion rates dynamically.
-2. Event Bus (Apache Kafka): Acts as the central nervous system, buffering high-speed incoming data to ensure the system remains fault-tolerant and decoupled.
-3. AI Workers (Python + PyTorch): Distributed consumers that pull tweets from Kafka. They perform real-time inference using a fine-tuned BERT (Bidirectional Encoder Representations from Transformers) model.
-4. State Store (Redis): An in-memory database used for atomic counters and real-time state management (sentiment ratios and system lag).
-5. Dashboard API (FastAPI): A WebSocket gateway that broadcasts live metrics and the processed "Firehose" feed to the client.
-6. Frontend (Next.js + Tailwind): A dashboard providing real-time visualization of sentiment trends and system performance metrics.
+TweetCheck is a distributed system designed to ingest, process, and visualize social media sentiment in real time. It simulates a live stream of tweets, runs sentiment inference with a fine-tuned BERT model, and displays the results through a web dashboard.
 
 ## Tech Stack
 
-* Languages: Golang 1.24 (Ingestion), Python 3.10 (AI & API), TypeScript (Frontend)
-* AI/ML: PyTorch, HuggingFace Transformers, BERT (Full version)
+* Languages: Golang 1.24, Python 3.10, TypeScript
+* AI/ML: PyTorch, HuggingFace Transformers (BERT)
 * Messaging: Apache Kafka, Zookeeper
 * Database: Redis
-* Frontend: Next.js 15, Tailwind CSS, Recharts, Lucide Icons
+* Backend API: FastAPI, WebSockets
+* Frontend: Next.js 16, React 19, Tailwind CSS 4, Lucide Icons
 * Orchestration: Docker, Docker Compose
 * CI/CD: GitHub Actions
+
+## Architecture
+
+The system follows a microservices event-driven architecture built for real-time processing:
+
+1. Ingestion Service (Golang): A producer that reads from the simulation dataset and pushes tweets into Kafka. It exposes simple runtime controls for starting, stopping, and changing the ingestion speed.
+2. Event Bus (Apache Kafka): Buffers incoming tweet events and decouples ingestion from downstream processing.
+3. AI Worker (Python + PyTorch): A consumer that reads tweets from Kafka, runs BERT sentiment inference, and writes live stats, recent tweets, and lag data to Redis.
+4. State Store (Redis): Stores aggregate sentiment counts, the latest processed tweets, and current system lag.
+5. Dashboard API (FastAPI): Provides a WebSocket feed for live dashboard updates and an API endpoint for manual sentiment checks.
+6. Frontend (Next.js + Tailwind): A dashboard for monitoring the live stream, controlling ingestion, and testing custom text against the model.
 
 ## Project Structure
 
 ```text
 TweetCheck/
-├── data/                 # Raw and split datasets (CSV)
-├── services/
-│   ├── go-ingestion/     # Golang Firehose Service
-│   ├── ai-worker/        # Python AI (Kafka Consumer + BERT)
-│   └── dashboard-api/    # FastAPI WebSocket Service
-├── training/             # Offline Model Training Scripts
-├── frontend/             # Next.js Web Dashboard
-├── .github/              # GitHub Actions CI/CD Workflows
-└── docker-compose.yaml   # Full System Orchestration
+|-- data/                 # Raw and prepared datasets (CSV)
+|-- services/
+|   |-- go-ingestion/     # Golang ingestion service
+|   |-- ai-worker/        # Python AI worker (Kafka consumer + BERT)
+|   `-- dashboard-api/    # FastAPI WebSocket and inference service
+|-- training/             # Model training and dataset setup scripts
+|-- frontend/             # Next.js web dashboard
+|-- .github/              # GitHub Actions workflows
+`-- docker-compose.yaml   # Full system orchestration
 ```
+
 ## Getting Started
 
 ### 1. Data Preparation
-Place your raw tweets.csv (Sentiment140 dataset) in the data/ folder and run the split script:
+
+The repository already includes `tweets.csv`, `train_dataset.csv`, and `simulation_dataset.csv`.
+
+If you want to regenerate the split datasets, run:
+
+```bash
 python training/setup_data.py
+```
 
 ### 2. Model Training
-This script will fine-tune the model and save it to services/ai-worker/model/.
+
+The repository already includes a trained model in `services/ai-worker/model/`.
+
+If you want to retrain the model, run:
+
+```bash
 python training/train.py
+```
 
 ### 3. Launch the System
-Run the entire distributed engine with a single command from the root directory:
-docker-compose up --build
+
+Run the full distributed system from the project root:
+
+```bash
+docker compose up --build
+```
+
+### 4. Open the App
+
+- Frontend dashboard: `http://localhost:3000`
+- Dashboard API: `http://localhost:8000`
+- Ingestion service: `http://localhost:8080`
 
 ## System Features
 
-### Real-Time Sentiment Pulse
-The dashboard visualizes positive vs. negative sentiment trends using a live-updating line chart. The BERT model analyzes each tweet's context to assign sentiment with high accuracy.
+### Live Sentiment Stream
 
-### Performance Monitoring (System Lag)
-The system calculates "Lag" by comparing the ingestion timestamp with the processing timestamp. This allows you to monitor exactly how many seconds the AI is behind the live stream.
+The dashboard displays a live feed of classified tweets as they move through the system. Each tweet is labeled as positive or negative using the fine-tuned BERT model.
 
+### Stream Controls
+
+The frontend includes controls for starting and stopping the stream and switching between slow, medium, and fast ingestion speeds.
+
+### Manual Sentiment Testing
+
+The dashboard also includes a sentiment check panel where you can submit custom text and receive a prediction with confidence from the same model used by the worker.
+
+### Performance Monitoring
+
+The system tracks processing lag by comparing ingestion time with inference time and stores that value in Redis for live monitoring.
 
 ## CI/CD
-This project utilizes GitHub Actions to ensure code quality. Every push to the main branch triggers an automated build process that verifies the Docker compatibility and compilation of all microservices (Go, Python, and Next.js).
+
+This project uses GitHub Actions to validate the system by building the Docker images for the Go service, AI worker, dashboard API, and frontend.
