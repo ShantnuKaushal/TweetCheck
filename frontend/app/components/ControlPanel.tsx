@@ -154,42 +154,36 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
       : "Control API unavailable.";
 
   return (
-    <div className="border-t border-[var(--border-soft)] pt-5">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
-        <div className="space-y-4">
-          <div>
-            <div className="text-sm font-medium tracking-[0.02em] text-[var(--muted-strong)]">Control</div>
-            <p className="mt-2 text-sm text-[var(--muted)]">{helperText}</p>
-          </div>
+    <section className="surface-panel rounded-[30px] p-5 sm:p-6">
+      <div className="flex flex-col gap-5">
+        <div>
+          <div className="text-[1.35rem] font-semibold tracking-[-0.04em] text-white">Control</div>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{helperText}</p>
+        </div>
 
-          <div>
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm font-medium text-white">Speed</span>
-              <span className="numeric text-sm text-[var(--muted-strong)]">{draftRate}/sec</span>
-            </div>
-            <div className="mt-3">
-              <input
-                type="range"
-                min="1"
-                max="500"
-                value={draftRate}
-                onChange={handleSlider}
-                onMouseUp={commitRate}
-                onTouchEnd={commitRate}
-                onKeyUp={commitRate}
-                disabled={snapshot.pending}
-                className="control-slider focus-ring cursor-pointer"
-                aria-label="Set ingestion speed"
-              />
-              <div className="mt-3 grid grid-cols-3 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-                <span>1</span>
-                <span className="text-center">250</span>
-                <span className="text-right">500</span>
-              </div>
-            </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-medium text-white">Speed</span>
+            <span className="numeric text-sm text-[var(--muted-strong)]">{draftRate}/sec</span>
           </div>
-
-          {snapshot.error ? <div className="text-sm text-[var(--danger)]">{snapshot.error}</div> : null}
+          <input
+            type="range"
+            min="1"
+            max="500"
+            value={draftRate}
+            onChange={handleSlider}
+            onMouseUp={commitRate}
+            onTouchEnd={commitRate}
+            onKeyUp={commitRate}
+            disabled={snapshot.pending}
+            className="control-slider focus-ring cursor-pointer"
+            aria-label="Set ingestion speed"
+          />
+          <div className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+            <span>1</span>
+            <span>250</span>
+            <span>500</span>
+          </div>
         </div>
 
         <button
@@ -204,7 +198,9 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
         >
           {snapshot.running ? "Stop" : "Start"}
         </button>
+
+        {snapshot.error ? <div className="text-sm text-[var(--danger)]">{snapshot.error}</div> : null}
       </div>
-    </div>
+    </section>
   );
 }

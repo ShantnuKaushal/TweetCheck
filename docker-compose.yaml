@@ -59,6 +59,8 @@ services:
     build: ./services/dashboard-api
     depends_on:
       - redis
+    volumes:
+      - ./services/ai-worker/model:/app/model
     environment:
       - REDIS_HOST=redis
     ports:
