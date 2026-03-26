@@ -19,7 +19,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Docker Aware Config
 redis_host = os.getenv("REDIS_HOST", "localhost")
 REDIS_URL = f"redis://{redis_host}:6379"
 MODEL_PATH = "/app/model" if os.path.exists("/app/model") else "../ai-worker/model"

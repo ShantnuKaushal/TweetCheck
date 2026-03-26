@@ -56,7 +56,7 @@ export default function SentimentTester() {
 
   return (
     <section className="surface-panel rounded-[30px] p-5 sm:p-6">
-      <div>
+      <div className="text-center">
         <div className="text-[1.35rem] font-semibold tracking-[-0.04em] text-white">Sentiment Check</div>
         <p className="mt-2 text-sm text-[var(--muted)]">Type a sentence and check the model response.</p>
       </div>

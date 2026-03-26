@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, Wifi, WifiOff } from "lucide-react";
 import ControlPanel, { type ControlSnapshot } from "./components/ControlPanel";
 import SentimentTester from "./components/SentimentTester";
 
 type Tweet = {
   text: string;
   sentiment: number;
-  lag: number;
 };
 
 type Stats = {
@@ -27,7 +25,7 @@ const compactNumber = new Intl.NumberFormat("en-US", {
 });
 
 const initialControlSnapshot: ControlSnapshot = {
-  rate: 10,
+  rate: 0.3,
   running: false,
   serviceReachable: false,
   pending: false,
@@ -35,32 +33,28 @@ const initialControlSnapshot: ControlSnapshot = {
   error: null,
 };
 
-function formatLagState(lag: number) {
-  if (lag <= 0.35) {
-    return "Healthy";
-  }
-
-  if (lag <= 1) {
-    return "Stable";
-  }
-
-  if (lag <= 2) {
-    return "Under load";
-  }
-
-  return "Degraded";
-}
-
 function formatSpeedMode(rate: number): SpotlightMode {
-  if (rate <= 30) {
+  if (rate <= 0.3) {
     return "slow";
   }
 
-  if (rate <= 120) {
+  if (rate <= 0.6) {
     return "medium";
   }
 
   return "fast";
+}
+
+function formatSpeedLabel(rate: number) {
+  if (rate <= 0.3) {
+    return "Slow";
+  }
+
+  if (rate <= 0.6) {
+    return "Medium";
+  }
+
+  return "Fast";
 }
 
 function Metric({
@@ -73,7 +67,7 @@ function Metric({
   detail: string;
 }) {
   return (
-    <div className="rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-4">
+    <div className="rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-4 text-center">
       <div className="label-kicker">{label}</div>
       <div className="numeric mt-2 text-3xl font-semibold tracking-[-0.04em] text-white">{value}</div>
       <div className="mt-1 text-sm text-[var(--muted)]">{detail}</div>
@@ -97,7 +91,6 @@ function RecentTweet({ tweet }: { tweet: Tweet }) {
           <span className={`h-2 w-2 rounded-full ${positive ? "bg-[var(--accent-strong)]" : "bg-[var(--danger)]"}`} />
           {positive ? "Positive" : "Negative"}
         </span>
-        <div className="numeric text-sm text-[var(--muted)]">{tweet.lag.toFixed(2)}s</div>
       </div>
       <p className="max-h-[7.5rem] overflow-hidden text-sm leading-6 text-[var(--muted-strong)]">{tweet.text}</p>
     </article>
@@ -107,10 +100,8 @@ function RecentTweet({ tweet }: { tweet: Tweet }) {
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats>({ total: 0, positive: 0, negative: 0 });
   const [feed, setFeed] = useState<Tweet[]>([]);
-  const [lag, setLag] = useState(0);
   const [socketState, setSocketState] = useState<SocketState>("connecting");
   const [controlSnapshot, setControlSnapshot] = useState<ControlSnapshot>(initialControlSnapshot);
-  const [currentRate, setCurrentRate] = useState(0);
 
   const prevStats = useRef<Stats>({ total: 0, positive: 0, negative: 0 });
 
@@ -144,15 +135,10 @@ export default function Dashboard() {
           negative: Number(data.stats.negative ?? 0),
         };
 
-        const positiveDelta = currentStats.positive - prevStats.current.positive;
-        const negativeDelta = currentStats.negative - prevStats.current.negative;
-
         prevStats.current = currentStats;
 
         setStats(currentStats);
         setFeed(Array.isArray(data.feed) ? data.feed : []);
-        setLag(Number(data.lag ?? 0));
-        setCurrentRate(Math.max(0, (positiveDelta + negativeDelta) * 10));
         setSocketState("live");
       };
 
@@ -188,19 +174,11 @@ export default function Dashboard() {
   const negativeShare = totalCount > 0 ? (stats.negative / totalCount) * 100 : 0;
   const currentTweet = feed[0] ?? null;
   const recentTweets = feed.slice(1, 4);
-  const targetRate = controlSnapshot.running ? controlSnapshot.rate : currentRate;
+  const targetRate = controlSnapshot.rate;
   const spotlightMode = formatSpeedMode(targetRate);
+  const backendOnline = socketState === "live" && controlSnapshot.serviceReachable;
 
-  const firehoseLabel = !controlSnapshot.initialized
-    ? "Checking"
-    : !controlSnapshot.serviceReachable
-      ? "Offline"
-      : controlSnapshot.running
-        ? `Live at ${controlSnapshot.rate}/s`
-        : "Standby";
-
-  const telemetryLabel =
-    socketState === "live" ? "Telemetry live" : socketState === "connecting" ? "Connecting" : "Telemetry offline";
+  const systemStatusLabel = backendOnline ? "Status: Online" : "Status: Offline";
 
   return (
     <main className="min-h-[100dvh]">
@@ -208,30 +186,20 @@ export default function Dashboard() {
         Skip to dashboard
       </a>
 
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-4 sm:px-6 lg:px-8 lg:py-8">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="mx-auto flex w-full max-w-[1520px] flex-col items-center gap-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-10">
+        <header className="flex w-full max-w-[980px] flex-col items-center gap-5 text-center">
           <div>
             <p className="label-kicker">Real-time sentiment dashboard</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">TweetCheck</h1>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(111,181,255,0.22)] bg-[rgba(111,181,255,0.06)] px-4 py-2 text-sm text-[var(--muted-strong)]">
-              {socketState === "live" ? (
-                <Wifi className="h-4 w-4 text-[var(--sky)]" />
-              ) : (
-                <WifiOff className="h-4 w-4 text-[var(--warning)]" />
-              )}
-              {telemetryLabel}
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(var(--accent-rgb),0.06)] px-4 py-2 text-sm text-[var(--muted-strong)]">
-              <Activity className="h-4 w-4 text-[var(--accent-strong)]" />
-              {firehoseLabel}
-            </div>
+          <div className="status-pill">
+            <span className={`status-orb ${backendOnline ? "status-orb-online" : "status-orb-offline"}`} aria-hidden="true" />
+            <span className="text-sm font-medium text-[var(--muted-strong)]">{systemStatusLabel}</span>
           </div>
         </header>
 
-        <section className="surface-panel rounded-[28px] p-4 sm:p-5">
+        <section className="surface-panel w-full max-w-[1180px] rounded-[28px] p-4 sm:p-5">
           <div className="grid gap-4 md:grid-cols-3">
             <Metric
               label="Processed"
@@ -239,34 +207,34 @@ export default function Dashboard() {
               detail={`${totalCount.toLocaleString()} classifications`}
             />
             <Metric
-              label="Lag"
-              value={`${lag.toFixed(2)}s`}
-              detail={formatLagState(lag)}
-            />
-            <Metric
               label="Sentiment split"
               value={`${positiveShare.toFixed(1)}%`}
               detail={`Negative ${negativeShare.toFixed(1)}%`}
             />
+            <Metric
+              label="Target"
+              value={controlSnapshot.running ? formatSpeedLabel(controlSnapshot.rate) : "Paused"}
+              detail={controlSnapshot.serviceReachable ? "Control reachable" : "Control unavailable"}
+            />
           </div>
         </section>
 
-        <div id="dashboard-content" className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_300px]">
+        <div
+          id="dashboard-content"
+          className="grid w-full max-w-[1260px] gap-6 xl:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] xl:items-start"
+        >
           <aside className="order-2 xl:order-1">
             <ControlPanel onStatusChange={setControlSnapshot} />
           </aside>
 
           <section className="surface-panel order-1 rounded-[32px] p-5 sm:p-6 xl:order-2">
-            <div className="flex flex-col gap-3 border-b border-[var(--border-soft)] pb-5 lg:flex-row lg:items-center lg:justify-between">
-              <div>
+            <div className="flex flex-col items-center gap-3 border-b border-[var(--border-soft)] pb-5 text-center lg:flex-row lg:justify-between lg:text-left">
+              <div className="lg:max-w-[32rem]">
                 <h2 className="text-[2rem] font-semibold tracking-[-0.05em] text-white">Live Stream</h2>
                 <p className="mt-2 text-sm text-[var(--muted)]">Tweets appear one at a time as they are classified.</p>
               </div>
 
               <div className="flex flex-wrap gap-3 text-sm">
-                <span className="rounded-full border border-[var(--border-soft)] px-4 py-2 text-white">
-                  <span className="numeric font-semibold">{currentRate.toFixed(1)}/s</span>
-                </span>
                 <span className="rounded-full border border-[rgba(var(--accent-rgb),0.22)] px-4 py-2 text-[var(--accent-strong)]">
                   <span className="numeric font-semibold">{positiveShare.toFixed(1)}%</span> positive
                 </span>
@@ -276,7 +244,7 @@ export default function Dashboard() {
             <div className="mt-6">
               {currentTweet ? (
                 <article
-                  key={`${currentTweet.text}-${currentTweet.sentiment}-${currentTweet.lag}`}
+                  key={`${currentTweet.text}-${currentTweet.sentiment}`}
                   className={`spotlight-card spotlight-${spotlightMode} ${currentTweet.sentiment === 1 ? "spotlight-positive" : "spotlight-negative"}`}
                 >
                   <div className="flex flex-wrap items-center gap-3">
@@ -294,10 +262,9 @@ export default function Dashboard() {
                       />
                       {currentTweet.sentiment === 1 ? "Positive" : "Negative"}
                     </span>
-                    <span className="numeric text-sm text-[var(--muted)]">{currentTweet.lag.toFixed(2)}s lag</span>
                   </div>
 
-                  <p className="mt-6 max-w-4xl text-balance text-3xl font-medium leading-[1.15] tracking-[-0.04em] text-white sm:text-4xl">
+                  <p className="mt-6 max-w-4xl text-balance text-center text-3xl font-medium leading-[1.15] tracking-[-0.04em] text-white sm:text-4xl">
                     {currentTweet.text}
                   </p>
                 </article>

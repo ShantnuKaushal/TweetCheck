@@ -6,20 +6,17 @@ from transformers import BertTokenizer, BertForSequenceClassification
 from torch.optim import AdamW
 from tqdm import tqdm
 
-# Configuration
 BATCH_SIZE = 32
 EPOCHS = 1
 LEARNING_RATE = 2e-5
 MAX_LEN = 64
 MODEL_NAME = 'bert-base-uncased'
 
-# Paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 data_path = os.path.join(project_root, "data", "train_dataset.csv")
 output_dir = os.path.join(project_root, "services", "ai-worker", "model")
 
-# Device Setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class SentimentDataset(Dataset):

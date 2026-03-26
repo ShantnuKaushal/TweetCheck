@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 
-# Path setup
 current_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(os.path.dirname(current_dir), "data")
 
@@ -17,10 +16,8 @@ def process_data():
     print("Loading dataset...")
     cols = ["sentiment", "id", "date", "query", "user", "text"]
     
-    # Read CSV (Sentiment140 uses specific encoding)
     df = pd.read_csv(INPUT_FILE, encoding="ISO-8859-1", names=cols)
-    
-    # Map 4 (Positive) to 1, 0 (Negative) stays 0
+
     df['sentiment'] = df['sentiment'].replace(4, 1)
     df = df[['sentiment', 'text']]
 

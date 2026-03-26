@@ -6,15 +6,12 @@ import time
 from kafka import KafkaConsumer
 from transformers import BertTokenizer, BertForSequenceClassification
 
-# Config - Docker Aware
 KAFKA_TOPIC = "tweets"
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = 6379
-# We look for model in current dir (local) or /app/model (docker)
 MODEL_PATH = "/app/model" if os.path.exists("/app/model") else "./model"
 
-# Redis Keys
 KEY_STATS = "tweetcheck:stats"
 KEY_LATEST = "tweetcheck:latest"
 KEY_LAG = "tweetcheck:lag"
@@ -22,8 +19,6 @@ KEY_LAG = "tweetcheck:lag"
 def main():
     print(f"AI Worker Starting... (Kafka: {KAFKA_BROKER}, Redis: {REDIS_HOST})")
 
-    # Force CPU for Docker compatibility unless GPU is explicitly passed through
-    # (Keeping it simple for the 'One Command' setup)
     if os.getenv("KAFKA_BROKER") != "localhost:9092":
         device = torch.device("cpu")
         print("Running in Docker Mode -> Using CPU")
@@ -42,7 +37,6 @@ def main():
         print(f"❌ Failed to load model: {e}")
         return
 
-    # Retry Redis Connection
     for i in range(10):
         try:
             r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
@@ -53,7 +47,6 @@ def main():
             print("Waiting for Redis...")
             time.sleep(2)
 
-    # Retry Kafka Connection
     consumer = None
     for i in range(20):
         try:
@@ -81,12 +74,10 @@ def main():
         text = tweet['text']
         timestamp = tweet.get('timestamp', 0)
         
-        # Calculate Lag
         current_time = int(time.time() * 1000)
         lag_ms = max(0, current_time - timestamp)
         lag_seconds = round(lag_ms / 1000, 2)
 
-        # Inference
         inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=64, padding="max_length")
         inputs = {k: v.to(device) for k, v in inputs.items()}
 
@@ -94,7 +85,6 @@ def main():
             outputs = model(**inputs)
             prediction = torch.argmax(outputs.logits, dim=1).item()
 
-        # Update Redis
         pipe = r.pipeline()
         
         pipe.hincrby(KEY_STATS, "total", 1)

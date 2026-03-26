@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	control   = Control{Rate: 10, Running: false}
+	control   = Control{Rate: 0.3, Running: false}
 	controlMx sync.Mutex
 )
 
@@ -32,8 +32,19 @@ type Tweet struct {
 }
 
 type Control struct {
-	Rate    int  `json:"rate"`
-	Running bool `json:"running"`
+	Rate    float64 `json:"rate"`
+	Running bool    `json:"running"`
+}
+
+func normalizeRate(rate float64) float64 {
+	switch {
+	case rate < 0.45:
+		return 0.3
+	case rate < 0.8:
+		return 0.6
+	default:
+		return 1.0
+	}
 }
 
 func main() {
@@ -52,7 +63,6 @@ func main() {
 }
 
 func setupKafkaProducer() sarama.SyncProducer {
-	// Docker Support: Check for Env Var, otherwise use localhost
 	kafkaURL := os.Getenv("KAFKA_URL")
 	if kafkaURL == "" {
 		kafkaURL = "localhost:9092"
@@ -63,7 +73,6 @@ func setupKafkaProducer() sarama.SyncProducer {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = true
 	
-	// Retry loop (Docker takes time to start Kafka)
 	for i := 0; i < 20; i++ {
 		producer, err := sarama.NewSyncProducer([]string{kafkaURL}, config)
 		if err == nil {
@@ -78,7 +87,6 @@ func setupKafkaProducer() sarama.SyncProducer {
 }
 
 func firehose(producer sarama.SyncProducer) {
-	// Docker Support: Check if running in container (different path)
 	path := DataPath
 	if _, err := os.Stat("/app/data/simulation_dataset.csv"); err == nil {
 		path = "/app/data/simulation_dataset.csv"
@@ -107,7 +115,7 @@ func firehose(producer sarama.SyncProducer) {
 			continue
 		}
 
-		sleepDuration := time.Duration(1000000/rate) * time.Microsecond
+		sleepDuration := time.Duration(float64(time.Second) / rate)
 
 		record, err := reader.Read()
 		if err != nil {
@@ -134,7 +142,7 @@ func firehose(producer sarama.SyncProducer) {
 
 		count++
 		if count%100 == 0 {
-			fmt.Printf("[Rate: %d/s] Pushed %d tweets\n", rate, count)
+			fmt.Printf("[Rate: %.1f/s] Pushed %d tweets\n", rate, count)
 		}
 		
 		time.Sleep(sleepDuration)
@@ -162,11 +170,13 @@ func handleControl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newControl.Rate = normalizeRate(newControl.Rate)
+
 	controlMx.Lock()
 	control = newControl
 	controlMx.Unlock()
 
-	fmt.Printf("Control Updated: Running=%v, Rate=%d/sec\n", control.Running, control.Rate)
+	fmt.Printf("Control Updated: Running=%v, Rate=%.1f/sec\n", control.Running, control.Rate)
 	w.WriteHeader(http.StatusOK)
 }
 

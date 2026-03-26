@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Rabbit, Turtle, Zap } from "lucide-react";
 
 const CONTROL_STATUS_URL = "http://localhost:8080/status";
 const CONTROL_UPDATE_URL = "http://localhost:8080/control";
@@ -19,7 +20,7 @@ type ControlPanelProps = {
 };
 
 const initialSnapshot: ControlSnapshot = {
-  rate: 10,
+  rate: 0.3,
   running: false,
   serviceReachable: false,
   pending: false,
@@ -27,16 +28,33 @@ const initialSnapshot: ControlSnapshot = {
   error: null,
 };
 
+const SPEED_PRESETS = [0.3, 0.6, 1.0] as const;
+const SPEED_LABELS = ["Slow", "Medium", "Fast"] as const;
+
+function rateToStep(rate: number) {
+  if (rate < 0.45) {
+    return 0;
+  }
+  if (rate < 0.8) {
+    return 1;
+  }
+  return 2;
+}
+
+function stepToRate(step: number) {
+  return SPEED_PRESETS[Math.min(2, Math.max(0, step))];
+}
+
 export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
   const [snapshot, setSnapshot] = useState<ControlSnapshot>(initialSnapshot);
-  const [draftRate, setDraftRate] = useState(initialSnapshot.rate);
+  const [draftStep, setDraftStep] = useState(0);
 
   useEffect(() => {
     onStatusChange?.(snapshot);
   }, [onStatusChange, snapshot]);
 
   useEffect(() => {
-    setDraftRate(snapshot.rate);
+    setDraftStep(rateToStep(snapshot.rate));
   }, [snapshot.rate]);
 
   const syncStatus = useCallback(async () => {
@@ -48,10 +66,11 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
       }
 
       const data = (await response.json()) as { rate: number; running: boolean };
+      const nextRate = stepToRate(rateToStep(Number(data.rate ?? initialSnapshot.rate)));
 
       setSnapshot((current) => ({
         ...current,
-        rate: Number(data.rate ?? current.rate),
+        rate: nextRate,
         running: Boolean(data.running),
         serviceReachable: true,
         pending: false,
@@ -93,10 +112,11 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
 
   const updateBackend = useCallback(async (nextRate: number, nextRunning: boolean) => {
     const previous = snapshot;
+    const safeRate = stepToRate(rateToStep(nextRate));
 
     setSnapshot((current) => ({
       ...current,
-      rate: nextRate,
+      rate: safeRate,
       running: nextRunning,
       pending: true,
       error: null,
@@ -108,7 +128,7 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ rate: nextRate, running: nextRunning }),
+        body: JSON.stringify({ rate: safeRate, running: nextRunning }),
       });
 
       if (!response.ok) {
@@ -134,13 +154,14 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
   }, [snapshot]);
 
   const commitRate = useCallback(() => {
-    if (draftRate !== snapshot.rate) {
-      void updateBackend(draftRate, snapshot.running);
+    const safeRate = stepToRate(draftStep);
+    if (safeRate !== snapshot.rate) {
+      void updateBackend(safeRate, snapshot.running);
     }
-  }, [draftRate, snapshot.rate, snapshot.running, updateBackend]);
+  }, [draftStep, snapshot.rate, snapshot.running, updateBackend]);
 
   const handleSlider = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setDraftRate(Number(event.target.value));
+    setDraftStep(Number(event.target.value));
   };
 
   const togglePower = () => {
@@ -148,15 +169,17 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
   };
 
   const helperText = snapshot.running
-    ? `${snapshot.rate}/sec streaming`
+    ? `${SPEED_LABELS[rateToStep(snapshot.rate)]} stream active`
     : snapshot.serviceReachable
       ? "Start the stream to begin processing."
       : "Control API unavailable.";
 
+  const draftLabel = SPEED_LABELS[draftStep];
+
   return (
     <section className="surface-panel rounded-[30px] p-5 sm:p-6">
       <div className="flex flex-col gap-5">
-        <div>
+        <div className="text-center">
           <div className="text-[1.35rem] font-semibold tracking-[-0.04em] text-white">Control</div>
           <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{helperText}</p>
         </div>
@@ -164,13 +187,14 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm font-medium text-white">Speed</span>
-            <span className="numeric text-sm text-[var(--muted-strong)]">{draftRate}/sec</span>
+            <span className="text-sm text-[var(--muted-strong)]">{draftLabel}</span>
           </div>
           <input
             type="range"
-            min="1"
-            max="500"
-            value={draftRate}
+            min="0"
+            max="2"
+            step="1"
+            value={draftStep}
             onChange={handleSlider}
             onMouseUp={commitRate}
             onTouchEnd={commitRate}
@@ -179,10 +203,19 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
             className="control-slider focus-ring cursor-pointer"
             aria-label="Set ingestion speed"
           />
-          <div className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
-            <span>1</span>
-            <span>250</span>
-            <span>500</span>
+          <div className="grid grid-cols-3 gap-2 text-xs text-[var(--muted)]">
+            <div className={`flex items-center gap-2 ${draftStep === 0 ? "text-[var(--accent-strong)]" : ""}`}>
+              <Turtle className="h-4 w-4" />
+              <span>Slow</span>
+            </div>
+            <div className={`flex items-center justify-center gap-2 ${draftStep === 1 ? "text-[var(--accent-strong)]" : ""}`}>
+              <Rabbit className="h-4 w-4" />
+              <span>Medium</span>
+            </div>
+            <div className={`flex items-center justify-end gap-2 ${draftStep === 2 ? "text-[var(--accent-strong)]" : ""}`}>
+              <Zap className="h-4 w-4" />
+              <span>Fast</span>
+            </div>
           </div>
         </div>
 

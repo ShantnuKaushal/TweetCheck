@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # --- INFRASTRUCTURE ---
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     environment:
@@ -29,13 +28,10 @@ services:
     ports:
       - "6379:6379"
 
-  # --- YOUR APPS ---
-  
   ingestion:
     build: ./services/go-ingestion
     depends_on:
       - kafka
-    # Mount the data folder so the container can see the CSV
     volumes:
       - ./data:/app/data
     environment:
@@ -48,7 +44,6 @@ services:
     depends_on:
       - kafka
       - redis
-    # Mount the model folder so the container can see your trained Brain
     volumes:
       - ./services/ai-worker/model:/app/model
     environment:
@@ -71,5 +66,4 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Tell Next.js to build in production mode
       - NODE_ENV=production
