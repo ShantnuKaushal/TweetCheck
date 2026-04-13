@@ -83,7 +83,9 @@ def main():
 
         with torch.no_grad():
             outputs = model(**inputs)
-            prediction = torch.argmax(outputs.logits, dim=1).item()
+            probabilities = torch.softmax(outputs.logits, dim=1)[0]
+            prediction = torch.argmax(probabilities).item()
+            confidence = round(float(probabilities[prediction].item()), 4)
 
         pipe = r.pipeline()
         
@@ -98,6 +100,7 @@ def main():
         result_json = json.dumps({
             "text": text,
             "sentiment": prediction,
+            "confidence": confidence,
             "lag": lag_seconds
         })
         pipe.lpush(KEY_LATEST, result_json)

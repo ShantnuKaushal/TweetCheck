@@ -57,7 +57,7 @@ export default function SentimentTester() {
   return (
     <section className="surface-panel rounded-[2rem] p-6 sm:p-8">
       <div className="text-center">
-        <div className="font-headline text-[1.65rem] font-black tracking-[-0.05em] text-white">Sentiment Check</div>
+        <div className="font-headline text-[1.65rem] font-black tracking-[-0.05em] text-[var(--foreground)]">Sentiment Check</div>
         <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--muted)]">Model Testing Tool</p>
       </div>
 
@@ -71,20 +71,20 @@ export default function SentimentTester() {
           onChange={(event) => setText(event.target.value)}
           placeholder="Type a sentence here..."
           rows={3}
-          className="focus-ring min-h-32 resize-none rounded-[1.25rem] border border-[rgba(71,85,105,0.3)] bg-[var(--surface-low)] px-5 py-4 text-sm leading-7 text-white outline-none transition placeholder:text-[color:rgba(148,163,184,0.45)]"
+          className="focus-ring min-h-32 resize-none rounded-[1.25rem] border border-[var(--panel-border)] bg-[var(--surface-low)] px-5 py-4 text-sm leading-7 text-[var(--foreground)] outline-none transition placeholder:text-[color:rgba(148,163,184,0.45)]"
         />
 
         <div className="flex flex-col gap-3">
           <button
             type="submit"
             disabled={loading}
-            className="focus-ring inline-flex min-h-14 items-center justify-center rounded-[1.25rem] border border-[rgba(71,85,105,0.38)] bg-[var(--surface-high)] px-5 py-4 text-sm font-bold text-white transition hover:bg-[var(--surface-bright)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="focus-ring inline-flex min-h-14 items-center justify-center rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--surface-bright)] px-5 py-4 text-sm font-bold text-[var(--foreground)] shadow-[0_10px_24px_rgba(15,23,42,0.08)] transition hover:border-[var(--muted-strong)] hover:bg-[var(--surface-lowest)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Checking..." : "Check sentiment"}
           </button>
 
           {result ? (
-            <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-[rgba(30,58,77,0.55)] bg-[var(--surface-high)] px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-[var(--panel-border)] bg-[var(--surface-high)] px-4 py-3">
               <div
                 className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-bold ${
                   result.sentiment === "positive"
@@ -94,7 +94,10 @@ export default function SentimentTester() {
               >
                 {result.sentiment === "positive" ? "Positive" : "Negative"}
               </div>
-              <div className="numeric text-sm font-bold text-[var(--muted-strong)]">{(result.confidence * 100).toFixed(1)}%</div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-[var(--muted-strong)]">
+                <span>Model Confidence</span>
+                <span className="numeric text-sm text-[var(--foreground)]">{(result.confidence * 100).toFixed(1)}%</span>
+              </div>
             </div>
           ) : null}
         </div>

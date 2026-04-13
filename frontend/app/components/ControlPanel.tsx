@@ -178,37 +178,44 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
       : "Control API unavailable.";
 
   const draftLabel = SPEED_LABELS[draftStep];
+  const sliderProgress = draftStep === 0 ? "0%" : draftStep === 1 ? "50%" : "100%";
   return (
     <section className="surface-panel rounded-[2rem] p-6 sm:p-8">
       <div className="flex flex-col gap-8">
         <div className="text-center">
-          <div className="font-headline text-[1.65rem] font-black tracking-[-0.05em] text-white">Control</div>
+          <div className="font-headline text-[1.65rem] font-black tracking-[-0.05em] text-[var(--foreground)]">Control</div>
           <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--muted)]">Stream Parameters</p>
         </div>
 
         <div className="space-y-5">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-xs font-bold uppercase tracking-[0.14em] text-white">Speed</span>
-            <span className="rounded-md bg-[rgba(var(--positive-rgb),0.1)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--positive)]">
-              {draftLabel}
-            </span>
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--foreground)]">Speed</span>
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em]">
+              <span className="text-[var(--muted)]">Current</span>
+              <span className="text-[var(--positive)]">{draftLabel}</span>
+            </div>
           </div>
 
           <div className="space-y-4">
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="1"
-              value={draftStep}
-              onChange={handleSlider}
-              onMouseUp={commitRate}
-              onTouchEnd={commitRate}
-              onKeyUp={commitRate}
-              disabled={snapshot.pending}
-              className="control-slider focus-ring cursor-pointer"
-              aria-label="Set ingestion speed"
-            />
+            <div className="slider-shell">
+              <div className="slider-shell-track" aria-hidden="true">
+                <div className="slider-shell-fill" style={{ width: sliderProgress }} />
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="1"
+                value={draftStep}
+                onChange={handleSlider}
+                onMouseUp={commitRate}
+                onTouchEnd={commitRate}
+                onKeyUp={commitRate}
+                disabled={snapshot.pending}
+                className="control-slider focus-ring cursor-pointer"
+                aria-label="Set ingestion speed"
+              />
+            </div>
 
             <div className="grid grid-cols-3 gap-2 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">
               <div className={`flex flex-col items-center gap-1 ${draftStep === 0 ? "text-[var(--muted-strong)]" : ""}`}>
@@ -234,7 +241,7 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
           className={`focus-ring inline-flex min-h-14 w-full items-center justify-center rounded-[1.25rem] px-5 py-4 text-center text-sm font-bold leading-none whitespace-nowrap transition active:scale-[0.98] ${
             snapshot.running
               ? "border border-[rgba(var(--negative-rgb),0.26)] bg-[rgba(var(--negative-rgb),0.12)] text-[var(--negative-strong)] hover:brightness-110"
-              : "bg-[var(--positive)] text-[#003544] shadow-[0_10px_20px_rgba(43,213,118,0.12)] hover:brightness-105"
+              : "bg-[var(--positive)] text-[var(--positive-on)] shadow-[0_10px_20px_var(--positive-shadow)] hover:brightness-105"
           } disabled:cursor-not-allowed disabled:opacity-60`}
         >
           {snapshot.running ? "Stop Stream" : "Start Stream"}
