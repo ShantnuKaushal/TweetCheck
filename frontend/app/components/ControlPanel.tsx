@@ -110,48 +110,51 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
     };
   }, [syncStatus]);
 
-  const updateBackend = useCallback(async (nextRate: number, nextRunning: boolean) => {
-    const previous = snapshot;
-    const safeRate = stepToRate(rateToStep(nextRate));
-
-    setSnapshot((current) => ({
-      ...current,
-      rate: safeRate,
-      running: nextRunning,
-      pending: true,
-      error: null,
-    }));
-
-    try {
-      const response = await fetch(CONTROL_UPDATE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ rate: safeRate, running: nextRunning }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update control service");
-      }
+  const updateBackend = useCallback(
+    async (nextRate: number, nextRunning: boolean) => {
+      const previous = snapshot;
+      const safeRate = stepToRate(rateToStep(nextRate));
 
       setSnapshot((current) => ({
         ...current,
-        serviceReachable: true,
-        pending: false,
-        initialized: true,
+        rate: safeRate,
+        running: nextRunning,
+        pending: true,
         error: null,
       }));
-    } catch {
-      setSnapshot({
-        ...previous,
-        serviceReachable: false,
-        pending: false,
-        initialized: true,
-        error: "Control update failed",
-      });
-    }
-  }, [snapshot]);
+
+      try {
+        const response = await fetch(CONTROL_UPDATE_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ rate: safeRate, running: nextRunning }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update control service");
+        }
+
+        setSnapshot((current) => ({
+          ...current,
+          serviceReachable: true,
+          pending: false,
+          initialized: true,
+          error: null,
+        }));
+      } catch {
+        setSnapshot({
+          ...previous,
+          serviceReachable: false,
+          pending: false,
+          initialized: true,
+          error: "Control update failed",
+        });
+      }
+    },
+    [snapshot],
+  );
 
   const commitRate = useCallback(() => {
     const safeRate = stepToRate(draftStep);
@@ -175,46 +178,51 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
       : "Control API unavailable.";
 
   const draftLabel = SPEED_LABELS[draftStep];
-
   return (
-    <section className="surface-panel rounded-[30px] p-5 sm:p-6">
-      <div className="flex flex-col gap-5">
+    <section className="surface-panel rounded-[2rem] p-6 sm:p-8">
+      <div className="flex flex-col gap-8">
         <div className="text-center">
-          <div className="text-[1.35rem] font-semibold tracking-[-0.04em] text-white">Control</div>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{helperText}</p>
+          <div className="font-headline text-[1.65rem] font-black tracking-[-0.05em] text-white">Control</div>
+          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--muted)]">Stream Parameters</p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-5">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-sm font-medium text-white">Speed</span>
-            <span className="text-sm text-[var(--muted-strong)]">{draftLabel}</span>
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-white">Speed</span>
+            <span className="rounded-md bg-[rgba(var(--positive-rgb),0.1)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--positive)]">
+              {draftLabel}
+            </span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="2"
-            step="1"
-            value={draftStep}
-            onChange={handleSlider}
-            onMouseUp={commitRate}
-            onTouchEnd={commitRate}
-            onKeyUp={commitRate}
-            disabled={snapshot.pending}
-            className="control-slider focus-ring cursor-pointer"
-            aria-label="Set ingestion speed"
-          />
-          <div className="grid grid-cols-3 gap-2 text-xs text-[var(--muted)]">
-            <div className={`flex items-center gap-2 ${draftStep === 0 ? "text-[var(--positive-strong)]" : ""}`}>
-              <Turtle className="h-4 w-4" />
-              <span>Slow</span>
-            </div>
-            <div className={`flex items-center justify-center gap-2 ${draftStep === 1 ? "text-[var(--positive-strong)]" : ""}`}>
-              <Rabbit className="h-4 w-4" />
-              <span>Medium</span>
-            </div>
-            <div className={`flex items-center justify-end gap-2 ${draftStep === 2 ? "text-[var(--positive-strong)]" : ""}`}>
-              <Zap className="h-4 w-4" />
-              <span>Fast</span>
+
+          <div className="space-y-4">
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="1"
+              value={draftStep}
+              onChange={handleSlider}
+              onMouseUp={commitRate}
+              onTouchEnd={commitRate}
+              onKeyUp={commitRate}
+              disabled={snapshot.pending}
+              className="control-slider focus-ring cursor-pointer"
+              aria-label="Set ingestion speed"
+            />
+
+            <div className="grid grid-cols-3 gap-2 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">
+              <div className={`flex flex-col items-center gap-1 ${draftStep === 0 ? "text-[var(--muted-strong)]" : ""}`}>
+                <Turtle className="h-4 w-4" />
+                <span>Slow</span>
+              </div>
+              <div className={`flex flex-col items-center gap-1 ${draftStep === 1 ? "text-[var(--muted-strong)]" : ""}`}>
+                <Rabbit className="h-4 w-4" />
+                <span>Medium</span>
+              </div>
+              <div className={`flex flex-col items-center gap-1 ${draftStep === 2 ? "text-[var(--muted-strong)]" : ""}`}>
+                <Zap className="h-4 w-4" />
+                <span>Fast</span>
+              </div>
             </div>
           </div>
         </div>
@@ -223,16 +231,22 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
           type="button"
           onClick={togglePower}
           disabled={snapshot.pending}
-          className={`focus-ring inline-flex min-h-12 w-full items-center justify-center rounded-full px-5 py-3 text-center text-sm font-semibold leading-none whitespace-nowrap transition ${
+          className={`focus-ring inline-flex min-h-14 w-full items-center justify-center rounded-[1.25rem] px-5 py-4 text-center text-sm font-bold leading-none whitespace-nowrap transition active:scale-[0.98] ${
             snapshot.running
-              ? "bg-[rgba(var(--negative-rgb),0.14)] text-[var(--negative-strong)] hover:-translate-y-0.5"
-              : "bg-[rgba(var(--positive-rgb),0.18)] text-[var(--positive-strong)] hover:-translate-y-0.5"
+              ? "border border-[rgba(var(--negative-rgb),0.26)] bg-[rgba(var(--negative-rgb),0.12)] text-[var(--negative-strong)] hover:brightness-110"
+              : "bg-[var(--positive)] text-[#003544] shadow-[0_10px_20px_rgba(43,213,118,0.12)] hover:brightness-105"
           } disabled:cursor-not-allowed disabled:opacity-60`}
         >
-          {snapshot.running ? "Stop" : "Start"}
+          {snapshot.running ? "Stop Stream" : "Start Stream"}
         </button>
 
-        {snapshot.error ? <div className="text-sm text-[var(--negative-strong)]">{snapshot.error}</div> : null}
+        {snapshot.error ? (
+          <div className="rounded-[1rem] border border-[rgba(var(--negative-rgb),0.24)] bg-[rgba(var(--negative-rgb),0.08)] px-4 py-3 text-sm text-[var(--negative-strong)]">
+            {snapshot.error}
+          </div>
+        ) : (
+          <div className="text-center text-xs text-[var(--muted)]">{helperText}</div>
+        )}
       </div>
     </section>
   );

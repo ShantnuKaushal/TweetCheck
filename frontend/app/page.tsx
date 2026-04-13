@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import ControlPanel, { type ControlSnapshot } from "./components/ControlPanel";
 import SentimentTester from "./components/SentimentTester";
 
@@ -45,18 +45,6 @@ function formatSpeedMode(rate: number): SpotlightMode {
   return "fast";
 }
 
-function formatSpeedLabel(rate: number) {
-  if (rate <= 0.3) {
-    return "Slow";
-  }
-
-  if (rate <= 0.6) {
-    return "Medium";
-  }
-
-  return "Fast";
-}
-
 function Metric({
   label,
   value,
@@ -67,9 +55,9 @@ function Metric({
   detail?: ReactNode;
 }) {
   return (
-    <div className="metric-card rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-4 text-center">
+    <div className="metric-card rounded-[1.5rem] border border-[rgba(30,58,77,0.55)] bg-[var(--surface)] px-6 py-8 text-center shadow-[0_12px_30px_rgba(2,12,20,0.16)]">
       <div className="label-kicker">{label}</div>
-      <div className="numeric mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">{value}</div>
+      <div className="numeric mt-4 text-5xl font-black tracking-[-0.06em] text-white">{value}</div>
       {detail ? <div className="mt-3">{detail}</div> : null}
     </div>
   );
@@ -83,26 +71,26 @@ function SentimentSplitMetric({
   negativeShare: number;
 }) {
   return (
-    <div className="metric-card rounded-[20px] border border-[var(--border-soft)] bg-[rgba(255,255,255,0.03)] px-4 py-4">
+    <div className="metric-card rounded-[1.5rem] border border-[rgba(30,58,77,0.55)] bg-[var(--surface)] px-6 py-8">
       <div className="label-kicker text-center">Sentiment split</div>
 
-      <div className="mt-4 flex items-center justify-center gap-3 sm:gap-4">
+      <div className="mt-5 flex items-center justify-center gap-8 sm:gap-12">
         <div className="metric-side">
           <div className="metric-side-label">
             <span className="metric-dot metric-dot-positive" aria-hidden="true" />
             Positive
           </div>
-          <div className="numeric mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">{positiveShare.toFixed(1)}%</div>
+          <div className="numeric mt-2 text-3xl font-black tracking-[-0.05em] text-white">{positiveShare.toFixed(1)}%</div>
         </div>
 
-        <div className="h-12 w-px bg-[var(--border-soft)]" aria-hidden="true" />
+        <div className="h-14 w-px bg-[rgba(71,85,105,0.45)]" aria-hidden="true" />
 
         <div className="metric-side">
           <div className="metric-side-label">
             <span className="metric-dot metric-dot-negative" aria-hidden="true" />
             Negative
           </div>
-          <div className="numeric mt-2 text-2xl font-semibold tracking-[-0.04em] text-white">{negativeShare.toFixed(1)}%</div>
+          <div className="numeric mt-2 text-3xl font-black tracking-[-0.05em] text-white">{negativeShare.toFixed(1)}%</div>
         </div>
       </div>
     </div>
@@ -113,20 +101,20 @@ function RecentTweet({ tweet }: { tweet: Tweet }) {
   const positive = tweet.sentiment === 1;
 
   return (
-    <article className="feed-row rounded-[18px] px-4 py-4">
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <article className={`feed-row rounded-[1.25rem] px-6 py-6 ${positive ? "feed-row-positive" : "feed-row-negative"}`}>
+      <div className="mb-4 flex items-start justify-between gap-3">
         <span
-          className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
             positive
-              ? "bg-[rgba(var(--positive-rgb),0.14)] text-[var(--positive-strong)]"
-              : "bg-[rgba(var(--negative-rgb),0.14)] text-[var(--negative-strong)]"
+              ? "border-[rgba(var(--positive-rgb),0.2)] bg-[rgba(var(--positive-rgb),0.1)] text-[var(--positive)]"
+              : "border-[rgba(var(--negative-rgb),0.2)] bg-[rgba(var(--negative-rgb),0.1)] text-[var(--negative)]"
           }`}
         >
-          <span className={`h-2 w-2 rounded-full ${positive ? "bg-[var(--positive-strong)]" : "bg-[var(--negative-strong)]"}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${positive ? "bg-[var(--positive)]" : "bg-[var(--negative)]"}`} />
           {positive ? "Positive" : "Negative"}
         </span>
       </div>
-      <p className="max-h-[7.5rem] overflow-hidden text-sm leading-6 text-[var(--muted-strong)]">{tweet.text}</p>
+      <p className="max-h-[8rem] overflow-hidden text-sm leading-7 text-[var(--muted)]">{tweet.text}</p>
     </article>
   );
 }
@@ -136,8 +124,6 @@ export default function Dashboard() {
   const [feed, setFeed] = useState<Tweet[]>([]);
   const [socketState, setSocketState] = useState<SocketState>("connecting");
   const [controlSnapshot, setControlSnapshot] = useState<ControlSnapshot>(initialControlSnapshot);
-
-  const prevStats = useRef<Stats>({ total: 0, positive: 0, negative: 0 });
 
   useEffect(() => {
     let active = true;
@@ -168,8 +154,6 @@ export default function Dashboard() {
           positive: Number(data.stats.positive ?? 0),
           negative: Number(data.stats.negative ?? 0),
         };
-
-        prevStats.current = currentStats;
 
         setStats(currentStats);
         setFeed(Array.isArray(data.feed) ? data.feed : []);
@@ -211,7 +195,6 @@ export default function Dashboard() {
   const targetRate = controlSnapshot.rate;
   const spotlightMode = formatSpeedMode(targetRate);
   const backendOnline = socketState === "live" && controlSnapshot.serviceReachable;
-
   const systemStatusLabel = backendOnline ? "Status: Online" : "Status: Offline";
 
   return (
@@ -220,73 +203,64 @@ export default function Dashboard() {
         Skip to dashboard
       </a>
 
-      <div className="mx-auto flex w-full max-w-[1520px] flex-col items-center gap-6 px-4 py-5 sm:px-6 lg:px-8 lg:py-10">
-        <header className="flex w-full max-w-[980px] flex-col items-center gap-5 text-center">
+      <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <header className="flex w-full flex-col items-center gap-4 pt-2 text-center">
           <div>
-            <p className="label-kicker">Real-time sentiment dashboard</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white sm:text-4xl">TweetCheck</h1>
+            <h1 className="font-headline mt-1 text-4xl font-black tracking-[-0.06em] text-white sm:text-[3.25rem]">TweetCheck</h1>
           </div>
 
           <div className="status-pill">
             <span className={`status-orb ${backendOnline ? "status-orb-online" : "status-orb-offline"}`} aria-hidden="true" />
-            <span className="text-sm font-medium text-[var(--muted-strong)]">{systemStatusLabel}</span>
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-white">{systemStatusLabel}</span>
           </div>
         </header>
 
-        <section className="surface-panel w-full max-w-[1180px] rounded-[28px] p-4 sm:p-5">
-          <div className="grid gap-4 md:grid-cols-3">
+        <section className="w-full">
+          <div className="grid gap-4 md:grid-cols-2">
             <Metric label="Processed" value={compactNumber.format(totalCount)} />
             <SentimentSplitMetric positiveShare={positiveShare} negativeShare={negativeShare} />
-            <Metric label="Target" value={controlSnapshot.running ? formatSpeedLabel(controlSnapshot.rate) : "Paused"} />
           </div>
         </section>
 
-        <div
-          id="dashboard-content"
-          className="grid w-full max-w-[1260px] gap-6 xl:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] xl:items-start"
-        >
-          <aside className="order-2 xl:order-1">
-            <ControlPanel onStatusChange={setControlSnapshot} />
-          </aside>
-
-          <section className="surface-panel order-1 rounded-[32px] p-5 sm:p-6 xl:order-2">
-            <div className="flex flex-col items-center gap-3 border-b border-[var(--border-soft)] pb-5 text-center lg:flex-row lg:justify-between lg:text-left">
-              <div className="lg:max-w-[32rem]">
-                <h2 className="text-[2rem] font-semibold tracking-[-0.05em] text-white">Live Stream</h2>
-                <p className="mt-2 text-sm text-[var(--muted)]">Tweets appear one at a time as they are classified.</p>
+        <div id="dashboard-content" className="grid w-full items-start gap-8 lg:grid-cols-12">
+          <section className="surface-panel lg:col-span-9 rounded-[2rem] p-5 sm:p-6 lg:p-8">
+            <div className="flex flex-col gap-3 border-b border-[rgba(30,58,77,0.5)] pb-5 text-center md:flex-row md:items-start md:justify-between md:text-left">
+              <div>
+                <h2 className="font-headline text-[2rem] font-black tracking-[-0.05em] text-white">Live Stream</h2>
+                <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">Tweets appear one at a time as they are classified.</p>
               </div>
 
-              <div className="flex flex-wrap gap-3 text-sm">
-                <span className="rounded-full border border-[rgba(var(--positive-rgb),0.22)] px-4 py-2 text-[var(--positive-strong)]">
-                  <span className="numeric font-semibold">{positiveShare.toFixed(1)}%</span> positive
+              <div className="flex justify-center md:justify-end">
+                <span className="inline-flex rounded-full border border-[rgba(var(--positive-rgb),0.2)] bg-[rgba(var(--positive-rgb),0.1)] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--positive)]">
+                  <span className="numeric">{positiveShare.toFixed(1)}%</span>&nbsp;positive
                 </span>
               </div>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-8">
               {currentTweet ? (
                 <article
                   key={`${currentTweet.text}-${currentTweet.sentiment}`}
                   className={`spotlight-card spotlight-${spotlightMode} ${currentTweet.sentiment === 1 ? "spotlight-positive" : "spotlight-negative"}`}
                 >
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="absolute left-8 top-8 flex flex-wrap items-center gap-3">
                     <span
-                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
                         currentTweet.sentiment === 1
-                          ? "bg-[rgba(var(--positive-rgb),0.16)] text-[var(--positive-strong)]"
-                          : "bg-[rgba(var(--negative-rgb),0.16)] text-[var(--negative-strong)]"
+                          ? "border-[rgba(var(--positive-rgb),0.2)] bg-[rgba(var(--positive-rgb),0.1)] text-[var(--positive)]"
+                          : "border-[rgba(var(--negative-rgb),0.2)] bg-[rgba(var(--negative-rgb),0.1)] text-[var(--negative)]"
                       }`}
                     >
                       <span
-                        className={`h-2.5 w-2.5 rounded-full ${
-                          currentTweet.sentiment === 1 ? "bg-[var(--positive-strong)]" : "bg-[var(--negative-strong)]"
+                        className={`h-2 w-2 rounded-full ${
+                          currentTweet.sentiment === 1 ? "bg-[var(--positive)]" : "bg-[var(--negative)]"
                         }`}
                       />
                       {currentTweet.sentiment === 1 ? "Positive" : "Negative"}
                     </span>
                   </div>
 
-                  <p className="mt-6 max-w-4xl text-balance text-center text-3xl font-medium leading-[1.15] tracking-[-0.04em] text-white sm:text-4xl">
+                  <p className="font-headline max-w-4xl text-balance text-left text-3xl font-bold leading-[1.14] tracking-[-0.05em] text-white sm:text-4xl lg:text-[3.45rem]">
                     {currentTweet.text}
                   </p>
                 </article>
@@ -302,9 +276,11 @@ export default function Dashboard() {
             </div>
 
             {recentTweets.length > 0 ? (
-              <div className="mt-6 border-t border-[var(--border-soft)] pt-5">
-                <div className="label-kicker">Recent</div>
-                <div className="mt-4 grid gap-3 lg:grid-cols-3">
+              <div className="mt-8">
+                <div className="mb-6 border-b border-[rgba(30,58,77,0.5)] pb-4">
+                  <div className="section-caption">Recent Activity</div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
                   {recentTweets.map((tweet, index) => (
                     <RecentTweet key={`${tweet.text}-${index}`} tweet={tweet} />
                   ))}
@@ -313,7 +289,8 @@ export default function Dashboard() {
             ) : null}
           </section>
 
-          <aside className="order-3 xl:order-3">
+          <aside className="space-y-8 lg:col-span-3">
+            <ControlPanel onStatusChange={setControlSnapshot} />
             <SentimentTester />
           </aside>
         </div>
