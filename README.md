@@ -9,9 +9,9 @@ TweetCheck is a distributed system designed to ingest, process, and visualize so
 * Messaging: Apache Kafka, Zookeeper
 * Database: Redis
 * Backend API: FastAPI, WebSockets
-* Frontend: Next.js 16, React 19, Tailwind CSS 4, Lucide Icons
+* Frontend: Next.js 16, React 19, Tailwind CSS 4
 * Orchestration: Docker, Docker Compose
-* CI/CD: GitHub Actions
+* CI: GitHub Actions
 
 ## Architecture
 
@@ -93,7 +93,7 @@ The dashboard also includes a sentiment check panel where you can submit custom 
 
 The system tracks processing lag by comparing ingestion time with inference time and stores that value in Redis for live monitoring.
 
-## CI/CD
+## CI
 
 This project uses GitHub Actions to validate the system by building the Docker images for the Go service, AI worker, dashboard API, and frontend.
 

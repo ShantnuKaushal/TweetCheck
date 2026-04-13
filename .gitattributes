@@ -1,0 +1,14 @@
+* linguist-detectable=false
+
+services/go-ingestion/main.go linguist-language=Go linguist-detectable=true
+services/go-ingestion/go.mod linguist-language=Go linguist-detectable=true
+services/go-ingestion/go.sum linguist-language=Go linguist-detectable=true
+
+services/ai-worker/main.py linguist-language=Python linguist-detectable=true
+services/dashboard-api/main.py linguist-language=Python linguist-detectable=true
+training/setup_data.py linguist-language=Python linguist-detectable=true
+training/train.py linguist-language=Python linguist-detectable=true
+
+frontend/app/components/ControlPanel.tsx linguist-language=TypeScript linguist-detectable=true
+frontend/app/layout.tsx linguist-language=TypeScript linguist-detectable=true
+frontend/next.config.ts linguist-language=TypeScript linguist-detectable=true
