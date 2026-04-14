@@ -99,6 +99,8 @@ This project uses GitHub Actions to validate the system by building the Docker i
 
 ## Dashboard Preview
 
-Below is a preview of the TweetCheck dashboard. It shows the live sentiment stream, ingestion controls, system status, and the built-in sentiment testing panel.
-<img width="2559" height="1439" alt="image" src="https://github.com/user-attachments/assets/a37cd503-ac05-45cd-bd1e-1b76ab4ef9dd" />
+Below is a preview of the TweetCheck dashboard. It shows the live sentiment stream, ingestion controls, and the built-in sentiment testing panel.
+<img width="1662" height="841" alt="Untitled-6" src="https://github.com/user-attachments/assets/aa2b70c2-a7e4-47f1-ab87-87017be4a7a3" />
+
+
 
