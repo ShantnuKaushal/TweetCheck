@@ -36,7 +36,7 @@ TweetCheck/
 |-- training/             # Model training and dataset setup scripts
 |-- frontend/             # Next.js web dashboard
 |-- .github/              # GitHub Actions workflows
-`-- docker-compose.yaml   # Full system orchestration
+`-- docker-compose.yaml   # Backend services for local development
 ```
 
 ## Getting Started
@@ -61,19 +61,56 @@ If you want to retrain the model, run:
 python training/train.py
 ```
 
-### 3. Launch the System
+### 3. Start the Backend
 
-Run the full distributed system from the project root:
+Run the backend stack from the project root:
 
 ```bash
 docker compose up --build
 ```
 
-### 4. Open the App
+This starts:
+
+- Zookeeper
+- Kafka
+- Redis
+- Go ingestion service on `http://localhost:8080`
+- Dashboard API on `http://localhost:8000`
+- AI worker
+
+To stop the backend stack:
+
+```bash
+docker compose down
+```
+
+### 4. Start the Frontend
+
+Run the frontend separately in another terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend dev server will be available at `http://localhost:3000`.
+
+### 5. Open the App
 
 - Frontend dashboard: `http://localhost:3000`
 - Dashboard API: `http://localhost:8000`
 - Ingestion service: `http://localhost:8080`
+
+## Local Development Workflow
+
+Use this split workflow for day-to-day development:
+
+1. Start the backend once with `docker compose up --build` from the repo root.
+2. Keep the backend running while you work on the UI.
+3. Run `npm run dev` inside `frontend/` for fast frontend iteration without rebuilding Docker.
+
+The frontend already talks to the backend through `localhost`, so no extra proxy setup is required for local development.
 
 ## System Features
 
@@ -97,9 +134,9 @@ The system tracks processing lag by comparing ingestion time with inference time
 
 This project uses GitHub Actions to validate the system by building the Docker images for the Go service, AI worker, dashboard API, and frontend.
 
-## Dashboard Preview
+## Dashboard Snapshot
 
-Below is a preview of the TweetCheck dashboard. It shows the live sentiment stream, ingestion controls, and the built-in sentiment testing panel.
+Below is a snapshot of the TweetCheck dashboard. It shows the live sentiment stream, ingestion controls, and the built-in sentiment testing panel.
 <img width="1662" height="841" alt="Untitled-6" src="https://github.com/user-attachments/assets/aa2b70c2-a7e4-47f1-ab87-87017be4a7a3" />
 
 

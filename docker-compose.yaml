@@ -1,7 +1,6 @@
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
-    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -10,7 +9,6 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    restart: on-failure
     stop_grace_period: 30s
     depends_on:
       - zookeeper
@@ -62,10 +60,3 @@ services:
       - REDIS_HOST=redis
     ports:
       - "8000:8000"
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
