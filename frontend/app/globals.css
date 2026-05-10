@@ -518,83 +518,6 @@ h4,
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
 }
 
-.preview-shell {
-  position: relative;
-}
-
-.preview-shell::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at top left, rgba(var(--positive-rgb), 0.12), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(72, 187, 255, 0.1), transparent 30%);
-  opacity: 0.8;
-}
-
-.preview-header {
-  overflow: hidden;
-}
-
-.preview-header-actions {
-  display: flex;
-  width: 100%;
-  max-width: 560px;
-}
-
-.preview-stream-toggle {
-  width: 100%;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.025),
-    0 10px 28px rgba(2, 12, 20, 0.18);
-}
-
-.preview-inline-confidence {
-  border: 1px solid var(--panel-border);
-  border-radius: 1.4rem;
-  background: linear-gradient(180deg, var(--panel-inset-top) 0%, var(--panel-inset-bottom) 100%);
-  padding: 1.25rem 1.35rem;
-}
-
-.preview-confidence-track {
-  height: 0.95rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--slider-track);
-  box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.05),
-    inset 0 -1px 2px rgba(15, 23, 42, 0.2);
-}
-
-.preview-confidence-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgba(var(--positive-rgb), 0.72) 0%, rgba(135, 255, 184, 0.92) 100%);
-  box-shadow:
-    0 0 20px rgba(var(--positive-rgb), 0.32),
-    inset 0 0 16px rgba(255, 255, 255, 0.16);
-}
-
-.preview-inline-confidence-meter {
-  width: min(100%, 360px);
-}
-
-.preview-spotlight-card {
-  min-height: 560px;
-  padding-top: 6rem;
-  padding-bottom: 3rem;
-}
-
-.preview-spotlight-empty {
-  min-height: 560px;
-  font-size: 1rem;
-}
-
-.preview-feed-row {
-  min-height: 150px;
-}
-
 @media (max-width: 1024px) {
   .spotlight-card {
     min-height: 300px;
@@ -603,44 +526,5 @@ h4,
 
   .metric-card {
     min-height: 172px;
-  }
-
-  .preview-spotlight-card {
-    min-height: 500px;
-    padding-top: 5.5rem;
-  }
-
-  .preview-spotlight-empty {
-    min-height: 500px;
-  }
-}
-
-@media (max-width: 1280px) {
-  .preview-header-actions {
-    max-width: none;
-  }
-}
-
-@media (max-width: 768px) {
-  .preview-confidence-track {
-    height: 0.85rem;
-  }
-
-  .preview-inline-confidence {
-    padding: 1rem 1rem 1.1rem;
-  }
-
-  .preview-spotlight-card {
-    min-height: 400px;
-    padding-top: 5.25rem;
-    padding-bottom: 2.5rem;
-  }
-
-  .preview-spotlight-empty {
-    min-height: 400px;
-  }
-
-  .preview-inline-confidence-meter {
-    width: 100%;
   }
 }

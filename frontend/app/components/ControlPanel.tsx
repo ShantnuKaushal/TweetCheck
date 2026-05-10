@@ -16,8 +16,6 @@ export type ControlSnapshot = {
 };
 
 type ControlPanelProps = {
-  mode?: "full" | "streamToggle";
-  defaultIdleRate?: number;
   onStatusChange?: (snapshot: ControlSnapshot) => void;
 };
 
@@ -47,10 +45,9 @@ function stepToRate(step: number) {
   return SPEED_PRESETS[Math.min(2, Math.max(0, step))];
 }
 
-export default function ControlPanel({ mode = "full", defaultIdleRate, onStatusChange }: ControlPanelProps) {
+export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
   const [snapshot, setSnapshot] = useState<ControlSnapshot>(initialSnapshot);
   const [draftStep, setDraftStep] = useState(0);
-  const [appliedDefaultIdleRate, setAppliedDefaultIdleRate] = useState(false);
 
   useEffect(() => {
     onStatusChange?.(snapshot);
@@ -174,34 +171,6 @@ export default function ControlPanel({ mode = "full", defaultIdleRate, onStatusC
     void updateBackend(snapshot.rate, !snapshot.running);
   };
 
-  useEffect(() => {
-    if (!defaultIdleRate || appliedDefaultIdleRate) {
-      return;
-    }
-
-    if (!snapshot.initialized || !snapshot.serviceReachable || snapshot.pending || snapshot.running) {
-      return;
-    }
-
-    const safeRate = stepToRate(rateToStep(defaultIdleRate));
-    if (snapshot.rate === safeRate) {
-      setAppliedDefaultIdleRate(true);
-      return;
-    }
-
-    setAppliedDefaultIdleRate(true);
-    void updateBackend(safeRate, false);
-  }, [
-    appliedDefaultIdleRate,
-    defaultIdleRate,
-    snapshot.initialized,
-    snapshot.pending,
-    snapshot.rate,
-    snapshot.running,
-    snapshot.serviceReachable,
-    updateBackend,
-  ]);
-
   const helperText = snapshot.running
     ? `${SPEED_LABELS[rateToStep(snapshot.rate)]} stream active`
     : snapshot.serviceReachable
@@ -210,40 +179,6 @@ export default function ControlPanel({ mode = "full", defaultIdleRate, onStatusC
 
   const draftLabel = SPEED_LABELS[draftStep];
   const sliderProgress = draftStep === 0 ? "0%" : draftStep === 1 ? "50%" : "100%";
-
-  if (mode === "streamToggle") {
-    return (
-      <section className="preview-stream-toggle rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--surface-low)] p-3 sm:p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-[var(--muted)]">Stream Control</div>
-            <div className="mt-1 text-sm text-[var(--muted-strong)]">
-              {snapshot.error
-                ? snapshot.error
-                : snapshot.running
-                  ? `${draftLabel} stream active`
-                  : snapshot.serviceReachable
-                    ? "Ready to start the live feed."
-                    : "Control API unavailable."}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={togglePower}
-            disabled={snapshot.pending}
-            className={`focus-ring inline-flex min-h-14 min-w-[220px] items-center justify-center rounded-[1.25rem] px-6 py-4 text-center text-base font-bold leading-none whitespace-nowrap transition active:scale-[0.98] ${
-              snapshot.running
-                ? "border border-[rgba(var(--negative-rgb),0.26)] bg-[rgba(var(--negative-rgb),0.12)] text-[var(--negative-strong)] hover:brightness-110"
-                : "bg-[var(--positive)] text-[var(--positive-on)] shadow-[0_10px_20px_var(--positive-shadow)] hover:brightness-105"
-            } disabled:cursor-not-allowed disabled:opacity-60`}
-          >
-            {snapshot.running ? "Stop Stream" : "Start Stream"}
-          </button>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="surface-panel rounded-[2rem] p-6 sm:p-8">
