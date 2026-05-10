@@ -12,6 +12,7 @@ training/*.csv
 # Ignore IDE settings
 .vscode/
 .idea/
+.worktrees/
 
 # Ignore OS files
 .DS_Store
