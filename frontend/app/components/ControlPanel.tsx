@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Rabbit, Turtle, Zap } from "lucide-react";
+import { Rabbit, Snail, Zap } from "lucide-react";
 
 const CONTROL_STATUS_URL = "http://localhost:8080/status";
 const CONTROL_UPDATE_URL = "http://localhost:8080/control";
@@ -146,10 +146,12 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
       } catch {
         setSnapshot({
           ...previous,
+          rate: safeRate,
+          running: nextRunning,
           serviceReachable: false,
           pending: false,
           initialized: true,
-          error: "Control update failed",
+          error: null,
         });
       }
     },
@@ -172,28 +174,30 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
   };
 
   const helperText = snapshot.running
-    ? `${SPEED_LABELS[rateToStep(snapshot.rate)]} stream active`
+    ? snapshot.serviceReachable
+      ? `${SPEED_LABELS[rateToStep(snapshot.rate)]} stream active`
+      : "Local demo stream active."
     : snapshot.serviceReachable
       ? "Start the stream to begin processing."
-      : "Control API unavailable.";
+      : "Start the stream to begin processing.";
 
   const draftLabel = SPEED_LABELS[draftStep];
   const sliderProgress = draftStep === 0 ? "0%" : draftStep === 1 ? "50%" : "100%";
 
   return (
-    <section className="surface-panel rounded-[2rem] p-6 sm:p-8">
+    <section className="surface-panel rounded-[14px] p-7">
       <div className="flex flex-col gap-8">
-        <div className="text-center">
-          <div className="font-headline text-[1.65rem] font-black tracking-[-0.05em] text-[var(--foreground)]">Control</div>
-          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.28em] text-[var(--muted)]">Stream Parameters</p>
+        <div>
+          <div className="font-headline text-[1.65rem] font-extrabold tracking-[-0.04em] text-[var(--foreground)]">Control</div>
+          <p className="mt-3 text-[13px] font-bold uppercase tracking-[0.16em] text-[var(--muted-strong)]">Stream Parameters</p>
         </div>
 
         <div className="space-y-5">
           <div className="flex items-center justify-between gap-4">
-            <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--foreground)]">Speed</span>
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em]">
+              <span className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-[var(--foreground)]">Speed</span>
+            <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.08em]">
               <span className="text-[var(--muted)]">Current</span>
-              <span className="text-[var(--positive)]">{draftLabel}</span>
+              <span className="text-[var(--accent)]">{draftLabel}</span>
             </div>
           </div>
 
@@ -218,17 +222,17 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">
-              <div className={`flex flex-col items-center gap-1 ${draftStep === 0 ? "text-[var(--muted-strong)]" : ""}`}>
-                <Turtle className="h-4 w-4" />
+            <div className="grid grid-cols-3 gap-2 text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">
+              <div className={`flex flex-col items-center gap-2 ${draftStep === 0 ? "text-[var(--accent)]" : ""}`}>
+                <Snail className="h-5 w-5" />
                 <span>Slow</span>
               </div>
-              <div className={`flex flex-col items-center gap-1 ${draftStep === 1 ? "text-[var(--muted-strong)]" : ""}`}>
-                <Rabbit className="h-4 w-4" />
+              <div className={`flex flex-col items-center gap-2 ${draftStep === 1 ? "text-[var(--accent)]" : ""}`}>
+                <Rabbit className="h-5 w-5" />
                 <span>Medium</span>
               </div>
-              <div className={`flex flex-col items-center gap-1 ${draftStep === 2 ? "text-[var(--muted-strong)]" : ""}`}>
-                <Zap className="h-4 w-4" />
+              <div className={`flex flex-col items-center gap-2 ${draftStep === 2 ? "text-[var(--accent)]" : ""}`}>
+                <Zap className="h-5 w-5" />
                 <span>Fast</span>
               </div>
             </div>
@@ -239,10 +243,10 @@ export default function ControlPanel({ onStatusChange }: ControlPanelProps) {
           type="button"
           onClick={togglePower}
           disabled={snapshot.pending}
-          className={`focus-ring inline-flex min-h-14 w-full items-center justify-center rounded-[1.25rem] px-5 py-4 text-center text-sm font-bold leading-none whitespace-nowrap transition active:scale-[0.98] ${
+          className={`focus-ring inline-flex min-h-14 w-full items-center justify-center rounded-[10px] px-5 py-4 text-center text-xl font-extrabold leading-none whitespace-nowrap transition active:scale-[0.99] ${
             snapshot.running
               ? "border border-[rgba(var(--negative-rgb),0.26)] bg-[rgba(var(--negative-rgb),0.12)] text-[var(--negative-strong)] hover:brightness-110"
-              : "bg-[var(--positive)] text-[var(--positive-on)] shadow-[0_10px_20px_var(--positive-shadow)] hover:brightness-105"
+              : "stream-button text-white hover:brightness-110"
           } disabled:cursor-not-allowed disabled:opacity-60`}
         >
           {snapshot.running ? "Stop Stream" : "Start Stream"}
